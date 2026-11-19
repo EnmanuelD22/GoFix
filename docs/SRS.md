@@ -5,7 +5,7 @@
 | Control documental | Definición |
 |---|---|
 | Código | GF-SRS-001 |
-| Versión y estado | 1.0 · Revisión editorial 1 (reorganización sin cambio de reglas) · Línea base propuesta para revisión |
+| Versión y estado | 1.0 · Revisión técnica 2 (Next.js, módulos y pruebas) · Línea base propuesta para revisión |
 | Fecha | 19 de noviembre de 2026 |
 | Producto | Plataforma web de conexión entre clientes y técnicos |
 | Tecnología acordada | React + TypeScript · ASP.NET Core · SQL Server |
@@ -371,4 +371,7 @@ Las observaciones **no cambian la línea base**. Requieren aprobación del respo
 | SRS-H1 | Media | RF-04 exige al menos una especialidad y un sector para publicar, pero RN-02 exige además una descripción de 50 a 1.000 caracteres. | Alinear el criterio de RF-04 con RN-02 para que la prueba de aceptación cubra las tres condiciones. |
 | SRS-H2 | Baja | RF-18 menciona «Cancelada tras aceptación», pero el estado final no distingue por sí mismo cuándo se canceló. La Arquitectura guarda la fecha de aceptación. | Redactar la regla de visibilidad en términos de ese dato: el contacto es visible si la solicitud tiene fecha de aceptación y no está eliminada. |
 | SRS-H3 | Media | RF-23 aparece en los casos CU-07 a CU-10, que se reparten en dos ramas (3 y 4). | Implementar el mecanismo de versión (rowversion) en la rama 3 y reutilizarlo en la 4, con la prueba de carrera en la rama 4. |
- 
+
+## Actualización técnica aprobada
+
+Por instrucción del responsable del proyecto, el frontend usa Next.js con React, ejecución Node y proxy HTTPS propio. El backend conserva las cuatro capas y organiza sus módulos bajo `Modules`. Se incorporan proyectos xUnit de aplicación, HTTP e integración SQL Server. Las migraciones y los casos de uso siguen pendientes; esta decisión no aprueba las observaciones de producto abiertas.
