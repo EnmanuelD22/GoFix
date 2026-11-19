@@ -81,29 +81,4 @@ internal static class HttpConfiguration
 
     #endregion
 
-    #region Aplicación web de origen único
-
-    internal static void UseGoFixStaticFiles(this WebApplication app)
-    {
-        if (Directory.Exists(app.Environment.WebRootPath))
-        {
-            app.UseWhen(context => !IsReservedPath(context.Request.Path), browser => browser.UseStaticFiles());
-        }
-    }
-
-    internal static void MapGoFixSpa(this WebApplication app)
-    {
-        var index = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
-        app.MapFallback((HttpContext context) =>
-            !IsReservedPath(context.Request.Path) && index.PhysicalPath is { } indexPath && File.Exists(indexPath)
-                ? Results.File(indexPath, "text/html; charset=utf-8")
-                : Results.NotFound())
-            .ExcludeFromDescription();
-    }
-
-    // Las rutas reservadas conservan sus respuestas HTTP aunque React publique una ruta con el mismo nombre.
-    private static bool IsReservedPath(PathString path) =>
-        path.StartsWithSegments("/api") || path.StartsWithSegments("/health") || path.StartsWithSegments("/openapi");
-
-    #endregion
 }

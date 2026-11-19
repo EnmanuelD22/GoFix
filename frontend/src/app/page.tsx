@@ -1,4 +1,4 @@
-export function App() {
+export default function Home() {
   return (
     <main className="intro" aria-labelledby="intro-title">
       <div className="intro__content">
