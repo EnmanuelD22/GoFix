@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GoFix.Domain/GoFix.Domain.csproj" />
+    <Project Path="src/GoFix.Application/GoFix.Application.csproj" />
+    <Project Path="src/GoFix.Infrastructure/GoFix.Infrastructure.csproj" />
+    <Project Path="src/GoFix.Api/GoFix.Api.csproj" />
+  </Folder>
+</Solution>

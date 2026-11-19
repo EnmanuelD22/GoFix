@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>GoFix.Api.Development</UserSecretsId>
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+    <ProjectReference Include="../GoFix.Application/GoFix.Application.csproj" />
+    <ProjectReference Include="../GoFix.Infrastructure/GoFix.Infrastructure.csproj" />
+  </ItemGroup>
+  <!-- Vite sirve los archivos durante el desarrollo. La publicación integra la SPA en el mismo origen. -->
+  <Target Name="IncludeFrontendInPublish" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <FrontendDist Include="../../frontend/dist/**/*" />
+      <ResolvedFileToPublish Include="@(FrontendDist->'%(FullPath)')">
+        <RelativePath>wwwroot/%(FrontendDist.RecursiveDir)%(FrontendDist.Filename)%(FrontendDist.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>
