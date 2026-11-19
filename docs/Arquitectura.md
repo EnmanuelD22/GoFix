@@ -5,7 +5,7 @@
 | Control documental | Definición |
 |---|---|
 | Código | GF-ARQ-001 |
-| Versión y estado | 1.0 · Revisión editorial 1 (reorganización sin cambio de reglas) · Línea base propuesta para revisión |
+| Versión y estado | 1.0 · Revisión técnica 2 (Next.js, módulos y pruebas) · Línea base propuesta para revisión |
 | Fecha | 19 de noviembre de 2026 |
 | Producto | Plataforma web de conexión entre clientes y técnicos |
 | Tecnología acordada | React + TypeScript · ASP.NET Core · SQL Server |
@@ -16,12 +16,12 @@
  
 ## 1. Objetivos y restricciones arquitectónicas
  
-GoFix se construirá como monolito modular con Clean Architecture pragmática. React presenta la experiencia web y consume una API ASP.NET Core. El backend concentra autorización, reglas y transacciones. SQL Server conserva datos de identidad y negocio en `GoFixDB`. La organización debe permitir seguir un caso de uso de extremo a extremo y verificar su comportamiento sin depender del navegador.
+GoFix se construirá como monolito modular con Clean Architecture pragmática. Next.js con React presenta la experiencia web y consume una API ASP.NET Core. El backend concentra autorización, reglas y transacciones. SQL Server conserva datos de identidad y negocio en `GoFixDB`. La organización debe permitir seguir un caso de uso de extremo a extremo y verificar su comportamiento sin depender del navegador.
  
 ### 1.1 Decisiones expresas y propuestas
  
 - **Decisiones expresas del solicitante:** React, SQL Server, monolito modular, Clean Architecture pragmática, SOLID, YAGNI y DRY.
-- **Propuesta técnica de implementación:** .NET 10 y EF Core 10 con parches compatibles fijados al crear el repositorio. React, TypeScript y Vite se fijan mediante `package.json` y archivo de bloqueo.
+- **Propuesta técnica de implementación:** .NET 10 y EF Core 10 con parches compatibles fijados al crear el repositorio. React, TypeScript y Next.js se fijan mediante `package.json` y archivo de bloqueo.
 ### 1.2 Atributos de calidad
  
 | Atributo | Decisión que lo favorece |
@@ -41,19 +41,19 @@ Las metas cuantitativas se encuentran en RNF-01 a RNF-12 del SRS. Son objetivos 
 | Componente | Responsabilidad y conexión |
 |---|---|
 | Navegador | Ejecuta React. Consume HTTPS `/api/v1` con JSON, cookie de sesión y token antifalsificación. |
-| `GoFix.Api` | Sirve la API y, en el despliegue propuesto, los archivos compilados de React. Orquesta autenticación y middleware. |
+| `GoFix.Api` | Sirve la API; Next.js ejecuta el frontend en un proceso separado. Orquesta autenticación y middleware. |
 | Application y Domain | Ejecutan casos de uso y reglas dentro del mismo proceso backend. |
 | Infrastructure | Implementa identidad, repositorios y consultas usando EF Core. |
 | SQL Server / `GoFixDB` | Almacena entidades, restricciones, historial y claves idempotentes. Solo el backend accede a la base durante la operación normal. |
  
 ### 2.2 Topología propuesta
  
-Cliente (navegador con React) → HTTPS → Servidor (ASP.NET Core con frontend compilado y API) → conexión SQL cifrada → Persistencia (SQL Server). El backend se publica como una unidad. SQL Server se administra como dependencia independiente. Los módulos comparten proceso y no requieren comunicación de red interna.
+Cliente (navegador con React) → HTTPS → Servidor (Next.js en Node y API ASP.NET Core) → conexión SQL cifrada → Persistencia (SQL Server). El backend se publica como una unidad. SQL Server se administra como dependencia independiente. Los módulos comparten proceso y no requieren comunicación de red interna.
  
 | Entorno | Comportamiento |
 |---|---|
-| Desarrollo | Vite sirve React y configura un proxy de `/api` al backend HTTPS. |
-| Despliegue de referencia | Frontend y API comparten origen, lo que simplifica cookies y protección antifalsificación. El fallback de rutas SPA se aplica fuera de `/api` y de las rutas de diagnóstico para conservar los códigos HTTP de la API. |
+| Desarrollo | Next.js ejecuta React y configura un proxy de `/api` al backend HTTPS. |
+| Despliegue de referencia | Next.js publica el origen web y reenvía `/api` al backend; frontend y API comparten el origen visible al navegador, lo que simplifica cookies y protección antifalsificación. Next.js resuelve las rutas web y su proxy conserva las respuestas HTTP de `/api`. |
  
 ## 3. Estructura de la solución
  
@@ -237,7 +237,7 @@ La API usa `/api/v1` y DTOs explícitos. La identidad del actor siempre proviene
  
 ## 8. Diseño del frontend
  
-React con TypeScript y Vite organiza `features/auth`, `profesionales`, `solicitudes` y `valoraciones`. Cada funcionalidad contiene páginas, componentes propios, tipos y llamadas a API. `shared` agrupa componentes y utilidades con usos comprobados. React Router controla la navegación pública y las áreas de cliente y técnico. La sesión se consulta mediante `/auth/me` y se comparte mediante contexto. El estado local gestiona formularios, filtros y diálogos.
+Next.js con React y TypeScript organiza `features/auth`, `profesionales`, `solicitudes` y `valoraciones`. Cada funcionalidad contiene páginas, componentes propios, tipos y llamadas a API. `shared` agrupa componentes y utilidades con usos comprobados. Next.js App Router controla la navegación pública y las áreas de cliente y técnico. La sesión se consulta mediante `/auth/me` y se comparte mediante contexto. El estado local gestiona formularios, filtros y diálogos.
  
 ### 8.1 Rutas web
  
@@ -290,7 +290,7 @@ Tailwind CSS es la propuesta de estilos. Se usarán componentes accesibles para 
 - Se sincroniza el reloj del servidor.
 ### 10.2 Publicación y migraciones
  
-1. La compilación React se copia a los archivos estáticos del host.
+1. Next.js se compila y se ejecuta con Node, configurando el destino HTTPS del proxy.
 2. El pipeline o procedimiento documentado publica ASP.NET Core.
 3. Se aplica una migración revisada, con respaldo previo, como paso controlado antes de iniciar la versión.
 4. Se ejecutan *smoke tests*.
@@ -326,7 +326,7 @@ La validación de formato puede aparecer en frontend y backend para ofrecer retr
  
 ### 12.1 Estructura del repositorio
  
-La solución incluye `GoFix.slnx`, `src/` con cuatro proyectos, `frontend/` y `tests/`. El README especificará SDK, Node compatible con la versión de Vite elegida, SQL Server disponible, cadena de conexión, migración y comandos de ejecución. Se fijan SDK y dependencias. La base y las credenciales reales quedan fuera de Git.
+La solución incluye `GoFix.slnx`, `src/` con cuatro proyectos, `frontend/` y `tests/`. El README especificará SDK, Node compatible con la versión de Next.js elegida, SQL Server disponible, cadena de conexión, migración y comandos de ejecución. Se fijan SDK y dependencias. La base y las credenciales reales quedan fuera de Git.
  
 ### 12.2 Integración académica (Git Flow adaptado)
  
@@ -343,7 +343,7 @@ El flujo responde a la consigna recibida. Si se requieren correcciones, se incor
  
 ### 13.1 Registro de decisiones (ADR)
  
-**ADR-01 · Monolito modular.** Cuatro proyectos backend y una SPA. *Motivo:* el alcance, los recursos y la entrega académica favorecen una unidad de despliegue y transacciones locales. *Consecuencia:* los módulos evolucionan juntos y una incidencia del proceso afecta al conjunto. *Alternativa evaluada:* microservicios, que exigirían despliegues, coordinación y observabilidad distribuida sin una necesidad actual demostrada.
+**ADR-01 · Monolito modular.** Cuatro proyectos backend y un frontend Next.js separado. *Motivo:* el alcance, los recursos y la entrega académica favorecen una unidad de despliegue backend y transacciones locales. *Consecuencia:* los módulos evolucionan juntos y una incidencia del proceso afecta al conjunto. *Alternativa evaluada:* microservicios, que exigirían despliegues, coordinación y observabilidad distribuida sin una necesidad actual demostrada.
  
 | ID | Decisión | Beneficio y compromiso |
 |---|---|---|
@@ -405,4 +405,7 @@ Las observaciones **no cambian la línea base**. Requieren aprobación del respo
 | ARQ-H5 | Baja | Especificaciones lista el formulario de valoración y la pantalla de valoraciones del técnico, pero la tabla de rutas web no tiene ruta para ellos. | Alojar el formulario en `/solicitudes/:id` y mostrar las valoraciones del técnico en su perfil público, o añadir `/tecnico/valoraciones`. |
 | ARQ-H6 | Media | Los errores llevan un `code` de aplicación, pero solo se menciona `recurso_eliminado`. | Definir un catálogo de códigos en OpenAPI antes de construir el cliente HTTP y las pantallas de error. |
 | ARQ-H7 | Baja | Los límites entre módulos son convencionales y se comprobarían «con revisión y pruebas de dependencias». | Automatizar esas pruebas de dependencias por espacios de nombres (por ejemplo, con una biblioteca de pruebas de arquitectura) desde la primera rama. |
- 
+
+## Actualización técnica aprobada
+
+Por instrucción del responsable del proyecto, el frontend usa Next.js con React, ejecución Node y proxy HTTPS propio. El backend conserva las cuatro capas y organiza sus módulos bajo `Modules`. Se incorporan proyectos xUnit de aplicación, HTTP e integración SQL Server. Las migraciones y los casos de uso siguen pendientes; esta decisión no aprueba las observaciones de producto abiertas.

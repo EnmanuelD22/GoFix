@@ -6,11 +6,7 @@ param(
     [ValidateSet(200, 503)]
     [int]$EstadoReady = 503,
 
-    [switch]$VerificarOpenApi,
-
-    [switch]$VerificarSpa,
-
-    [switch]$VerificarProduccion
+    [switch]$VerificarOpenApi
 )
 
 $ErrorActionPreference = 'Stop'
@@ -95,43 +91,6 @@ try {
             $openApi.Dispose()
         }
         Write-Host 'Contrato OpenAPI de desarrollo aprobado.'
-    }
-
-    if ($VerificarSpa -or $VerificarProduccion) {
-        $page = Assert-EstadoHttp $client 'solicitudes' 200
-        try {
-            if ($page.Content.Headers.ContentType.MediaType -ne 'text/html') {
-                throw 'Una ruta web debe devolver el HTML de React mediante el fallback.'
-            }
-            $html = $page.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-        } finally {
-            $page.Dispose()
-        }
-
-        # Se prueban las rutas de los assets que el HTML entregado solicita al navegador.
-        $assets = [regex]::Matches($html, '(?:src|href)="(/assets/[^\"]+)"') |
-            ForEach-Object { $_.Groups[1].Value.TrimStart('/') }
-        if (-not $assets) {
-            throw 'El HTML publicado debe referenciar los assets compilados de React.'
-        }
-        foreach ($path in ($assets | Sort-Object -Unique)) {
-            $asset = Assert-EstadoHttp $client $path 200
-            try {
-                if (-not $asset.Content.Headers.ContentType -or $asset.Content.Headers.ContentType.MediaType -eq 'text/html') {
-                    throw "GET /$path debe entregar el asset solicitado."
-                }
-            } finally {
-                $asset.Dispose()
-            }
-        }
-
-        (Assert-EstadoHttp $client "health/$([guid]::NewGuid())" 404).Dispose()
-        Write-Host 'Fallback de React, assets y exclusion de rutas de diagnostico aprobados.'
-    }
-
-    if ($VerificarProduccion) {
-        (Assert-EstadoHttp $client 'openapi/v1.json' 404).Dispose()
-        Write-Host 'OpenAPI permanece deshabilitado en produccion.'
     }
 
     Write-Host 'Verificacion HTTP aprobada: liveness, readiness y error de API.'

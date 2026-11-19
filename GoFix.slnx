@@ -5,4 +5,9 @@
     <Project Path="src/GoFix.Infrastructure/GoFix.Infrastructure.csproj" />
     <Project Path="src/GoFix.Api/GoFix.Api.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GoFix.Application.Tests/GoFix.Application.Tests.csproj" />
+    <Project Path="tests/GoFix.Api.Tests/GoFix.Api.Tests.csproj" />
+    <Project Path="tests/GoFix.Integration.Tests/GoFix.Integration.Tests.csproj" />
+  </Folder>
 </Solution>
