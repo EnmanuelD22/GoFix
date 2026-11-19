@@ -137,7 +137,7 @@ erDiagram
     SolicitudServicio ||--o| IdempotenciaSolicitud : "clave"
 ```
  
-*Figura 2. Relaciones principales. Las relaciones N:M usan tablas intermedias. La solicitud también referencia una especialidad y un sector. Ver observación ARQ-H1 sobre el identificador del técnico.*
+*Figura 2. Relaciones principales. Las relaciones N:M usan tablas intermedias. La solicitud también referencia una especialidad y un sector. La decisión ARQ-H1 define el identificador del técnico.*
  
 ### 5.2 Tablas y restricciones
  
@@ -394,13 +394,13 @@ Los marcadores [A1] a [A5] del documento original respaldaban: A1 la arquitectur
 - No se modificó ninguna regla, límite ni decisión.
 ### A.2 Observaciones
  
-Las observaciones **no cambian la línea base**. Requieren aprobación del responsable del producto según Especificaciones 1.2.
+Las observaciones pendientes no cambian la línea base y requieren aprobación del responsable del producto. ARQ-H1 y ARQ-H3 fueron aprobadas como se indica a continuación.
  
 | ID | Prioridad | Observación | Recomendación |
 |---|---|---|---|
-| ARQ-H1 | Alta | `SolicitudServicio.TecnicoId`, `Valoracion.TecnicoId` y la ruta `/tecnicos/{id}` no indican si el identificador es el de `PerfilTecnico` o el de `Usuario`. La figura 2 no lo resuelve. | Decidir antes de la rama 1. Una opción coherente con el modelo: `TecnicoId` = `PerfilTecnico.Id` (también en la ruta pública) y `ClienteId` = `Usuario.Id`, evitando exponer el identificador de la cuenta. |
+| ARQ-H1 · Resuelta | Alta | `SolicitudServicio.TecnicoId`, `Valoracion.TecnicoId` y la ruta `/tecnicos/{id}` no indican si el identificador es el de `PerfilTecnico` o el de `Usuario`. La figura 2 no lo resuelve. | Aprobado: `TecnicoId` = `PerfilTecnico.Id` en solicitudes, valoraciones y ruta pública; `ClienteId` = `Usuario.Id`. El perfil tiene GUID propio y `UsuarioId` único. La autorización comprueba la propiedad del perfil. |
 | ARQ-H2 | Media | RN-10 exige `DateTimeOffset` para las citas, pero la tabla de `SolicitudServicio` no indica el tipo de columna de las fechas preferida y confirmada. | Especificar `datetimeoffset` para esas dos fechas y `datetime2` en UTC para los eventos. |
-| ARQ-H3 | Media | El SRS habla de catálogos precargados y mantenidos por un procedimiento de operación, pero la arquitectura solo describe la inicialización de roles. | Definir antes de la rama 1 cómo se cargan especialidades y sectores (datos semilla en migración o script de operación), pues RF-04 y RF-05 dependen de ello. |
+| ARQ-H3 · Resuelta | Media | El SRS habla de catálogos precargados y mantenidos por un procedimiento de operación, pero la arquitectura solo describe la inicialización de roles. | Aprobado: migraciones para las tablas y script SQL versionado e idempotente para la carga inicial aprobada; operación ejecuta el procedimiento de forma controlada. El municipio y los valores iniciales siguen pendientes de aprobación. |
 | ARQ-H4 | Media | La expiración debe ser absoluta (60 minutos). Según tengo entendido, la cookie de Identity renueva por defecto la expiración con la actividad (expiración deslizante). | Verificar en la versión fijada y desactivar la expiración deslizante si procede. Añadir una prueba de RNF-01. |
 | ARQ-H5 | Baja | Especificaciones lista el formulario de valoración y la pantalla de valoraciones del técnico, pero la tabla de rutas web no tiene ruta para ellos. | Alojar el formulario en `/solicitudes/:id` y mostrar las valoraciones del técnico en su perfil público, o añadir `/tecnico/valoraciones`. |
 | ARQ-H6 | Media | Los errores llevan un `code` de aplicación, pero solo se menciona `recurso_eliminado`. | Definir un catálogo de códigos en OpenAPI antes de construir el cliente HTTP y las pantallas de error. |
@@ -409,3 +409,7 @@ Las observaciones **no cambian la línea base**. Requieren aprobación del respo
 ## Actualización técnica aprobada
 
 Por instrucción del responsable del proyecto, el frontend usa Next.js con React, ejecución Node y proxy HTTPS propio. El backend conserva las cuatro capas y organiza sus módulos bajo `Modules`. Se incorporan proyectos xUnit de aplicación, HTTP e integración SQL Server. Las migraciones y los casos de uso siguen pendientes; esta decisión no aprueba las observaciones de producto abiertas.
+
+## Decisiones de identificadores y catálogos
+
+El responsable aprobó las decisiones ARQ-H1 y ARQ-H3. Los identificadores públicos no sustituyen la autorización por recurso. El script de catálogos usará claves estables, evitará duplicados y no sobrescribirá cambios de operación accidentalmente; las entradas en uso se desactivarán en vez de eliminarse para conservar referencias históricas. El municipio y las listas iniciales de especialidades y sectores quedan pendientes de aprobación. La implementación y las migraciones siguen pendientes.
