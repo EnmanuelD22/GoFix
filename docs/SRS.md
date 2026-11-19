@@ -375,3 +375,7 @@ Las observaciones **no cambian la línea base**. Requieren aprobación del respo
 ## Actualización técnica aprobada
 
 Por instrucción del responsable del proyecto, el frontend usa Next.js con React, ejecución Node y proxy HTTPS propio. El backend conserva las cuatro capas y organiza sus módulos bajo `Modules`. Se incorporan proyectos xUnit de aplicación, HTTP e integración SQL Server. Las migraciones y los casos de uso siguen pendientes; esta decisión no aprueba las observaciones de producto abiertas.
+
+## Decisiones aprobadas para el módulo 1
+
+El responsable aprobó que el identificador público y las referencias al técnico correspondan a `PerfilTecnico.Id`, con relación única a la cuenta. Las tablas de especialidades y sectores se crearán mediante migraciones y sus valores iniciales aprobados se cargarán mediante un script SQL versionado e idempotente, ejecutado por operación. Las entradas en uso se desactivarán para conservar referencias. El municipio y las listas iniciales siguen pendientes de aprobación. Estas decisiones no implican que el módulo ya esté implementado.
