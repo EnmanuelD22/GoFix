@@ -57,7 +57,7 @@ Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y prueba
 
 ### Decisiones previas a la implementación
 
-Los documentos distinguen acuerdos, propuestas y observaciones sin aprobar. Antes del primer incremento funcional deben resolverse ARQ-H1 (identificador público del técnico) y ARQ-H3 (procedimiento y contenido inicial de catálogos). También siguen abiertas las observaciones sobre tipos temporales, expiración de sesión, ubicación de valoraciones y catálogo de errores (ARQ-H2, H4, H5 y H6), además de las políticas y metas propuestas en Especificaciones y SRS.
+El responsable aprobó usar `PerfilTecnicoId` como identificador público y referencia del técnico. Las migraciones crearán las tablas de catálogos y un script SQL versionado e idempotente cargará los valores iniciales aprobados. Quedan por decidir el municipio, las especialidades y los sectores iniciales. Siguen abiertas las observaciones sobre tipos temporales, expiración de sesión, ubicación de valoraciones y catálogo de errores (ARQ-H2, H4, H5 y H6), además de las políticas y metas propuestas en Especificaciones y SRS.
 
 La rama histórica `feature/usuarios-perfiles` entregó la base técnica y ya completó sus tres PR. El trabajo funcional pendiente requiere ramas nuevas desde `dev` actualizado, con nombres que describan su contenido.
 
