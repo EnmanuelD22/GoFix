@@ -28,7 +28,6 @@ else
 
 app.UseHttpsRedirection();
 app.UseGoFixErrors();
-app.UseGoFixStaticFiles();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
@@ -36,7 +35,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains(InfrastructureRegistration.ReadinessTag)
 });
 app.MapGroup("/api/v1").MapGoFixApi();
-app.MapGoFixSpa();
 
 app.Run();
 

@@ -5,7 +5,7 @@
 | Control documental | Definición |
 |---|---|
 | Código | GF-ESP-001 |
-| Versión y estado | 1.0 · Revisión editorial 1 (reorganización sin cambio de reglas) · Línea base propuesta para revisión |
+| Versión y estado | 1.0 · Revisión técnica 2 (Next.js, módulos y pruebas) · Línea base propuesta para revisión |
 | Fecha | 19 de noviembre de 2026 |
 | Producto | Plataforma web de conexión entre clientes y técnicos |
 | Tecnología acordada | React + TypeScript · ASP.NET Core · SQL Server |
@@ -189,4 +189,7 @@ Las observaciones **no cambian la línea base**. Requieren aprobación del respo
 | ESP-H1 | Alta | El SRS declara obligatorios los 24 RF y los 12 RNF. Entre ellos hay ensayos de rendimiento y restauración, limitación de peticiones, idempotencia y comprobaciones de salud, todo dentro de una entrega académica de cinco ramas y con YAGNI como principio acordado. | Clasificar los requisitos como Debe / Debería / Podría y definir el mínimo de la entrega. Candidatos a «Debería»: RNF-03, RNF-04, RNF-09 y RF-24. La decisión es del responsable del producto. |
 | ESP-H2 | Baja | El recorrido dice que, tras registrarse, el cliente «vuelve al perfil». El SRS (CU-01) indica que el registro no abre sesión automática. | Aclarar que el flujo es registro, acceso y regreso al perfil, conservando la ruta de retorno durante el acceso. |
 | ESP-H3 | Media | El detalle público (RF-07, rama 2) muestra promedio y cantidad, pero la reputación nace en la rama 5. El historial se crea con las solicitudes (rama 3) y se consulta en la rama 4. | Incluir promedio y cantidad en el contrato desde la rama 2 (con «Sin valoraciones») y crear la tabla de historial en la migración de la rama 3. |
- 
+
+## Actualización técnica aprobada
+
+Por instrucción del responsable del proyecto, el frontend usa Next.js con React, ejecución Node y proxy HTTPS propio. El backend conserva las cuatro capas y organiza sus módulos bajo `Modules`. Se incorporan proyectos xUnit de aplicación, HTTP e integración SQL Server. Las migraciones y los casos de uso siguen pendientes; esta decisión no aprueba las observaciones de producto abiertas.
