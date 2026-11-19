@@ -1,0 +1,53 @@
+:root {
+  font-family: 'Trebuchet MS', sans-serif;
+  color: #133936;
+  background-color: #f4f7f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+}
+
+.intro {
+  min-block-size: 100svh;
+  box-sizing: border-box;
+  display: grid;
+  align-items: center;
+  padding: clamp(1.5rem, 8vw, 8rem);
+  border-block-start: 0.65rem solid #286c5e;
+}
+
+.intro__content {
+  max-inline-size: 56rem;
+}
+
+.brand {
+  display: inline-block;
+  margin: 0 0 clamp(2.5rem, 7vw, 5.25rem);
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.2rem;
+  background: #dcebe6;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+h1 {
+  max-inline-size: 14ch;
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: clamp(2.8rem, 8vw, 6rem);
+  font-weight: 600;
+  line-height: 0.99;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.intro__description {
+  max-inline-size: 46ch;
+  margin: clamp(1.35rem, 3vw, 2.25rem) 0 0;
+  color: #345852;
+  font-size: clamp(1.125rem, 2vw, 1.4rem);
+  line-height: 1.55;
+}

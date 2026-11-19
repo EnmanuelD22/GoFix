@@ -3,6 +3,14 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Configuración local de agentes y skills
+/.agents/
+/.codex/
+/AGENTS.md
+/**/AGENTS.md
+/RulesFlow.md
+/skills-lock.json
+
 # User-specific files
 *.rsuser
 *.suo
