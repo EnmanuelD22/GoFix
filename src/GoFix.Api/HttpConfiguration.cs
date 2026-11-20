@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace GoFix.Api;
 
@@ -32,7 +33,15 @@ internal static class HttpConfiguration
     internal static void UseGoFixErrors(this WebApplication app)
     {
         app.UseExceptionHandler(errorApp => errorApp.Run(context =>
-            Results.Problem(statusCode: StatusCodes.Status500InternalServerError).ExecuteAsync(context)));
+        {
+            // El binding de HTTP puede rechazar la entrada antes de alcanzar el caso de uso.
+            // Conservamos ese código sin exponer el contenido de la petición ni la excepción.
+            var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+            var status = exception is BadHttpRequestException badRequest
+                ? badRequest.StatusCode
+                : StatusCodes.Status500InternalServerError;
+            return Results.Problem(statusCode: status).ExecuteAsync(context);
+        }));
 
         app.UseWhen(context => context.Request.Path.StartsWithSegments("/api"), api =>
         {
