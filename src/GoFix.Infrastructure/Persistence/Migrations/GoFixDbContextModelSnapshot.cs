@@ -22,6 +22,44 @@ namespace GoFix.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("GoFix.Domain.Modules.Professionals.Especialidad", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Especialidad", "professionals", t =>
+                        {
+                            t.HasCheckConstraint("CK_Especialidad_Codigo", "[Codigo] COLLATE Latin1_General_100_BIN2 LIKE '[a-z0-9]%'\nAND [Codigo] COLLATE Latin1_General_100_BIN2 NOT LIKE '%[^a-z0-9-]%'\nAND DATALENGTH([Codigo]) = LEN([Codigo])");
+
+                            t.HasCheckConstraint("CK_Especialidad_Nombre", "LEN(TRIM([Nombre])) > 0");
+                        });
+                });
+
             modelBuilder.Entity("GoFix.Domain.Modules.Professionals.PerfilTecnico", b =>
                 {
                     b.Property<Guid>("Id")
@@ -47,6 +85,275 @@ namespace GoFix.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PerfilTecnico", "professionals");
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Professionals.Sector", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Municipio")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Municipio", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Sector", "professionals", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sector_Codigo", "[Codigo] COLLATE Latin1_General_100_BIN2 LIKE '[a-z0-9]%'\nAND [Codigo] COLLATE Latin1_General_100_BIN2 NOT LIKE '%[^a-z0-9-]%'\nAND DATALENGTH([Codigo]) = LEN([Codigo])");
+
+                            t.HasCheckConstraint("CK_Sector_NombreMunicipio", "LEN(TRIM([Nombre])) > 0 AND LEN(TRIM([Municipio])) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Professionals.TecnicoEspecialidad", b =>
+                {
+                    b.Property<Guid>("PerfilTecnicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("EspecialidadId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PerfilTecnicoId", "EspecialidadId");
+
+                    b.HasIndex("EspecialidadId", "PerfilTecnicoId");
+
+                    b.ToTable("TecnicoEspecialidad", "professionals");
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Professionals.TecnicoSector", b =>
+                {
+                    b.Property<Guid>("PerfilTecnicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SectorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PerfilTecnicoId", "SectorId");
+
+                    b.HasIndex("SectorId", "PerfilTecnicoId");
+
+                    b.ToTable("TecnicoSector", "professionals");
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Reviews.Valoracion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Comentario")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<byte>("Puntuacion")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TecnicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolicitudId")
+                        .IsUnique();
+
+                    b.HasIndex("SolicitudId", "ClienteId", "TecnicoId");
+
+                    b.HasIndex("TecnicoId", "CreatedAtUtc", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("Valoracion", "reviews", t =>
+                        {
+                            t.HasCheckConstraint("CK_Valoracion_Puntuacion", "[Puntuacion] BETWEEN 1 AND 5");
+                        });
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Services.HistorialSolicitud", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<byte?>("EstadoNuevo")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte?>("EstadoPrevio")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("TipoEvento")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId");
+
+                    b.HasIndex("SolicitudId", "CreatedAtUtc", "Id");
+
+                    b.ToTable("HistorialSolicitud", "services", t =>
+                        {
+                            t.HasCheckConstraint("CK_HistorialSolicitud_Estados", "([EstadoPrevio] IS NULL OR [EstadoPrevio] BETWEEN 1 AND 6) AND ([EstadoNuevo] IS NULL OR [EstadoNuevo] BETWEEN 1 AND 6)");
+
+                            t.HasCheckConstraint("CK_HistorialSolicitud_TipoEvento", "[TipoEvento] BETWEEN 1 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Services.IdempotenciaSolicitud", b =>
+                {
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("Clave")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("HashContenido")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<Guid>("SolicitudId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ClienteId", "Clave");
+
+                    b.HasIndex("SolicitudId")
+                        .IsUnique();
+
+                    b.HasIndex("SolicitudId", "ClienteId");
+
+                    b.ToTable("IdempotenciaSolicitud", "services");
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Services.SolicitudServicio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AceptadaAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("EspecialidadId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Estado")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTimeOffset?>("FechaConfirmada")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTimeOffset>("FechaPreferida")
+                        .HasColumnType("datetimeoffset(7)");
+
+                    b.Property<DateTime?>("FinAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<DateTime?>("InicioAtUtc")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SectorId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TecnicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EspecialidadId");
+
+                    b.HasIndex("SectorId");
+
+                    b.HasIndex("ClienteId", "CreatedAtUtc", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.HasIndex("TecnicoId", "Estado", "CreatedAtUtc", "Id")
+                        .IsDescending(false, false, true, true);
+
+                    b.ToTable("SolicitudServicio", "services", t =>
+                        {
+                            t.HasCheckConstraint("CK_SolicitudServicio_Borrado", "([IsDeleted] = 0 AND [DeletedAtUtc] IS NULL) OR ([IsDeleted] = 1 AND [Estado] = 1 AND [DeletedAtUtc] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_SolicitudServicio_Estado", "[Estado] BETWEEN 1 AND 6");
+                        });
                 });
 
             modelBuilder.Entity("GoFix.Infrastructure.Modules.Identity.GoFixUser", b =>
@@ -301,6 +608,98 @@ namespace GoFix.Infrastructure.Persistence.Migrations
                     b.HasOne("GoFix.Infrastructure.Modules.Identity.GoFixUser", null)
                         .WithOne()
                         .HasForeignKey("GoFix.Domain.Modules.Professionals.PerfilTecnico", "UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Professionals.TecnicoEspecialidad", b =>
+                {
+                    b.HasOne("GoFix.Domain.Modules.Professionals.Especialidad", null)
+                        .WithMany()
+                        .HasForeignKey("EspecialidadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoFix.Domain.Modules.Professionals.PerfilTecnico", null)
+                        .WithMany()
+                        .HasForeignKey("PerfilTecnicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Professionals.TecnicoSector", b =>
+                {
+                    b.HasOne("GoFix.Domain.Modules.Professionals.PerfilTecnico", null)
+                        .WithMany()
+                        .HasForeignKey("PerfilTecnicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoFix.Domain.Modules.Professionals.Sector", null)
+                        .WithMany()
+                        .HasForeignKey("SectorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Reviews.Valoracion", b =>
+                {
+                    b.HasOne("GoFix.Domain.Modules.Services.SolicitudServicio", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitudId", "ClienteId", "TecnicoId")
+                        .HasPrincipalKey("Id", "ClienteId", "TecnicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Services.HistorialSolicitud", b =>
+                {
+                    b.HasOne("GoFix.Infrastructure.Modules.Identity.GoFixUser", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoFix.Domain.Modules.Services.SolicitudServicio", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitudId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Services.IdempotenciaSolicitud", b =>
+                {
+                    b.HasOne("GoFix.Domain.Modules.Services.SolicitudServicio", null)
+                        .WithMany()
+                        .HasForeignKey("SolicitudId", "ClienteId")
+                        .HasPrincipalKey("Id", "ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GoFix.Domain.Modules.Services.SolicitudServicio", b =>
+                {
+                    b.HasOne("GoFix.Infrastructure.Modules.Identity.GoFixUser", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoFix.Domain.Modules.Professionals.Especialidad", null)
+                        .WithMany()
+                        .HasForeignKey("EspecialidadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoFix.Domain.Modules.Professionals.Sector", null)
+                        .WithMany()
+                        .HasForeignKey("SectorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GoFix.Domain.Modules.Professionals.PerfilTecnico", null)
+                        .WithMany()
+                        .HasForeignKey("TecnicoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
