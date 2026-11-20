@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
     <!-- La versión transitiva de SqlClient está afectada por CVE-2026-70162 y CVE-2026-84008. -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />

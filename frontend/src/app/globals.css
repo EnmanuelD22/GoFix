@@ -51,3 +51,108 @@ h1 {
   font-size: clamp(1.125rem, 2vw, 1.4rem);
   line-height: 1.55;
 }
+
+.intro__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-block-start: 2rem;
+}
+
+.intro__actions a:not(.identity-button), .identity a:not(.brand) {
+  color: #23594c;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.2em;
+}
+
+.identity {
+  min-block-size: 100svh;
+  box-sizing: border-box;
+  border-block-start: 0.65rem solid #286c5e;
+  padding: clamp(1.25rem, 5vw, 4rem) max(1.25rem, calc((100% - 32rem) / 2));
+}
+
+.identity-brand {
+  color: #133936;
+  margin-block-end: 1.5rem;
+  text-decoration: none;
+}
+
+.identity h1 {
+  max-inline-size: none;
+  font-size: clamp(2.25rem, 7vw, 3.75rem);
+  margin-block-end: 1.5rem;
+}
+
+.identity fieldset {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.identity label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.identity input, .identity select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.7rem 0.75rem;
+  background: #fff;
+  color: inherit;
+  border: 1px solid #68857c;
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+.identity-button {
+  display: inline-block;
+  justify-self: start;
+  padding: 0.75rem 1.15rem;
+  background: #20584b;
+  color: white;
+  border: 1px solid #20584b;
+  border-radius: 0.25rem;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.identity :focus-visible, .intro__actions :focus-visible {
+  outline: 0.15rem solid #8e3d1f;
+  outline-offset: 0.2rem;
+}
+
+.identity button:disabled { cursor: wait; opacity: 0.7; }
+
+.identity-notice, .identity-success {
+  margin-block: 1rem;
+  padding: 0.85rem 1rem;
+  border-inline-start: 0.25rem solid currentColor;
+  overflow-wrap: anywhere;
+}
+
+.identity-notice { background: #f9ebe5; color: #77371d; }
+.identity-success { background: #dcebe6; }
+.identity-notice small { display: block; margin-block-start: 0.5rem; }
+.identity-details { margin-block: 0 1.5rem; overflow-wrap: anywhere; }
+.identity-details div { padding-block: 0.55rem; border-block-end: 1px solid #cad8d1; }
+.identity-details dt { font-size: 0.9rem; }
+.identity-details dd { margin-inline: 0; font-weight: 700; }
+.identity-exit {
+  margin-block-start: 1.25rem;
+  padding: 0.65rem 0;
+  border: 0;
+  background: transparent;
+  color: #23594c;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  font: inherit;
+  cursor: pointer;
+}
