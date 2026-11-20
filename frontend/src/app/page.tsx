@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <main className="intro" aria-labelledby="intro-title">
@@ -7,6 +9,10 @@ export default function Home() {
         <p className="intro__description">
           Una plataforma para conectar a personas que necesitan asistencia en casa con técnicos de su zona.
         </p>
+        <nav className="intro__actions" aria-label="Cuenta">
+          <Link className="identity-button" href="/registro">Crear cuenta</Link>
+          <Link href="/cuenta">Mi cuenta</Link>
+        </nav>
       </div>
     </main>
   );

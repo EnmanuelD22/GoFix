@@ -1,7 +1,11 @@
+using GoFix.Application.Modules.Identity;
+using GoFix.Infrastructure.Modules.Identity;
 using GoFix.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace GoFix.Infrastructure;
 
@@ -17,6 +21,25 @@ public static class InfrastructureRegistration
         services.AddDbContext<GoFixDbContext>(options => options.UseSqlServer(
             configuration.GetConnectionString("GoFix"),
             sql => sql.MigrationsHistoryTable("__EFMigrationsHistory")));
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddIdentityCore<GoFixUser>(options =>
+        {
+            options.User.RequireUniqueEmail = true;
+            options.Password.RequiredLength = 12;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireNonAlphanumeric = false;
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        })
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<GoFixDbContext>()
+            .AddSignInManager();
+        services.AddScoped<IIdentityStore, EfIdentityStore>();
+        services.AddScoped<IdentityService>();
 
         services.AddHealthChecks().AddCheck<SqlServerHealthCheck>(
             "sql-server",

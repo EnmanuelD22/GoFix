@@ -1,3 +1,3 @@
 # Professionals / Domain
 
-Modulo reservado para el incremento funcional. Todavia sin implementar.
+Identidad crea un perfil técnico inicial. La gestión de perfiles y catálogos corresponde al incremento de Profesionales.

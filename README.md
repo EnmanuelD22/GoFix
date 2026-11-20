@@ -6,7 +6,7 @@ Plataforma web para conectar clientes con técnicos de su zona. El producto cont
 
 La base técnica está implementada: solución por capas, host ASP.NET Core, configuración de EF Core para SQL Server, diagnósticos de disponibilidad, errores HTTP con Problem Details, emisión de token antifalsificación, OpenAPI de desarrollo y una página inicial Next.js con React. Next.js se ejecuta en un proceso Node separado y reenvía `/api` al backend HTTPS.
 
-Las capas contienen carpetas `Modules/Identity`, `Modules/Professionals`, `Modules/Services` y `Modules/Reviews`. Domain y Application contienen la estructura de proyectos, pero todavía no incluyen entidades ni casos de uso. No hay Identity configurado, migraciones, esquema funcional, registro, perfiles, búsqueda ni CRUD de servicios. La comprobación de conectividad SQL no acredita la integridad del futuro modelo de negocio.
+Identidad permite registrar cuentas de cliente y técnico, iniciar y cerrar sesión, consultar la sesión y editar el nombre y el teléfono propios. El registro técnico crea un perfil inicial sin publicar. La edición profesional, los catálogos, la búsqueda y el CRUD de servicios siguen en la lista de implementación.
 
 ## Stack tecnológico
 
@@ -17,9 +17,9 @@ Las capas contienen carpetas `Modules/Identity`, `Modules/Professionals`, `Modul
 | Frontend | Next.js 16.4.6, React 19.3 y TypeScript 6 |
 | Contratos y diagnóstico | OpenAPI en desarrollo, Problem Details y Health Checks |
 | Dependencias | Versiones y archivos de bloqueo de NuGet y npm versionados |
-| Verificación actual | xUnit para HTTP y SQL Server; proyecto de pruebas de aplicación preparado; scripts PowerShell |
+| Verificación actual | xUnit para aplicación, HTTP y SQL Server; scripts PowerShell |
 
-ASP.NET Core Identity forma parte del diseño pendiente de implementar. Las versiones exactas se consultan en los archivos de proyecto y `frontend/package.json`.
+ASP.NET Core Identity gestiona cuentas, contraseñas y roles. Las versiones exactas se consultan en los archivos de proyecto y `frontend/package.json`.
 
 ## Arquitectura y estructura
 
@@ -35,25 +35,23 @@ Monolito modular con Clean Architecture pragmática. Los módulos previstos son 
 | `tests` | Comprobaciones ejecutables de arquitectura y HTTP |
 | `docs` | Especificaciones, arquitectura y requisitos de referencia |
 
-Domain permanece independiente de frameworks. Los futuros endpoints deben invocar casos de uso; los contratos entre módulos no deben exponer `DbSet` ni `IQueryable`.
+Domain permanece independiente de frameworks. Los endpoints de negocio invocan casos de uso; los contratos entre módulos no deben exponer `DbSet` ni `IQueryable`.
 
 ## Plan de implementación por módulos
 
-La tabla describe trabajo pendiente, no funcionalidades entregadas. El orden sigue las dependencias del producto y el plan de Especificaciones; los criterios detallados permanecen en el SRS.
+Marca cada casilla cuando el alcance indicado esté implementado y verificado. Los criterios detallados están en el SRS.
 
-| Orden / módulo | Backend y datos pendientes | Interfaz pendiente | Evidencia de terminación |
-|---|---|---|---|
-| 1. Identidad | Identity, roles cliente/técnico, registro atómico, sesión por cookie, cierre de sesión y edición de cuenta | Registro, acceso y edición de cuenta | RF-01 a RF-03: validación, unicidad de correo, roles, sesión y rollback ante registro incompleto |
-| 1. Profesionales y catálogos | Perfil técnico, especialidades, sectores, asociaciones y completitud; carga inicial de catálogos y migraciones | Edición de descripción y cobertura | RF-04 y RF-05: publicación según completitud y persistencia consistente de perfil y cuenta |
-| 2. Consulta de profesionales | Consultas filtradas y paginadas, ficha pública y contrato de reputación inicialmente sin opiniones | Buscador, filtros, resultados y perfil público | RF-06 y RF-07: filtros combinados, paginación, ausencia de contactos privados y perfiles no publicados |
-| 3. Servicios: solicitudes | Agregado, repositorios, creación, consulta, edición y eliminación lógica de pendientes; historial inicial, idempotencia y rowversion | Solicitar asistencia, listado, detalle y edición | RF-08 a RF-11 y RF-24: CRUD propio, acceso cruzado rechazado y creación única ante reenvíos |
-| 4. Servicios: seguimiento | Aceptar, rechazar, cancelar, iniciar y completar; transacciones de estado e historial, autorización y visibilidad de contacto | Paneles por rol, acciones permitidas e historial | RF-12 a RF-18, RF-21 y RF-23: matriz de transiciones y carreras concurrentes sobre SQL Server |
-| 5. Valoraciones | Elegibilidad, puntuación, unicidad por servicio y consulta de reputación | Formulario de valoración y opiniones del técnico | RF-19 y RF-20: una opinión por servicio completado, permisos y promedio/cantidad correctos |
-| Transversal: seguridad y contratos | Autorización por recurso, cookies de sesión, validación antifalsificación en mutaciones, límites de acceso y catálogo de errores | Cliente HTTP, manejo de sesión y permisos | RNF-01 a RNF-03 y RNF-10: respuestas seguras, correlación y ausencia de datos sensibles en logs |
-| Transversal: experiencia web | Contratos de carga, validación y conflictos para cada operación | Estados vacíos, errores, accesibilidad, adaptación y prevención de doble envío | RF-22, RNF-06, RNF-07 y RNF-12: teclado, tamaños de pantalla y fallos recuperables |
-| Transversal: entrega y calidad | Migraciones reproducibles, pruebas por módulo, límites entre módulos, publicación y procedimientos operativos | Recorrido completo cliente–técnico | RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11: instalación limpia, SQL real, medición y restauración documentadas |
+- [x] **1. Identidad (RF-01 a RF-03).** Registro de cliente o técnico, alta atómica del perfil técnico inicial, acceso y salida con cookie, consulta de sesión y edición de la cuenta propia.
+- [ ] **1. Profesionales y catálogos (RF-04 y RF-05).** Edición y publicación del perfil profesional, selección de especialidades y sectores activos, y carga inicial de los catálogos.
+- [ ] **2. Consulta de profesionales (RF-06 y RF-07).** Búsqueda paginada por especialidad y sector, perfil público y reputación sin exponer contactos privados.
+- [ ] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
+- [ ] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
+- [ ] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
+- [ ] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
+- [ ] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
+- [ ] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
 
-Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y pruebas aplicables. Las pruebas con SQL Server real son necesarias para demostrar restricciones, transacciones y concurrencia; los scripts actuales no cubren esos comportamientos.
+Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y pruebas aplicables. Las pruebas con SQL Server real verifican restricciones, transacciones y concurrencia.
 
 ### Decisiones previas a la implementación
 
@@ -63,7 +61,7 @@ La rama histórica `feature/usuarios-perfiles` entregó la base técnica y ya co
 
 ## Desarrollo local
 
-Requisitos: SDK indicado en `global.json`, Node.js 24 o superior compatible con el frontend, npm y PowerShell para los scripts. SQL Server es necesario para obtener readiness saludable y, cuando existan migraciones, ejecutar los flujos persistidos.
+Requisitos: SDK indicado en `global.json`, Node.js 24 o superior compatible con el frontend, npm y PowerShell para los scripts. SQL Server es necesario para obtener readiness saludable y ejecutar los flujos de Identidad.
 
 Desde la raíz:
 
@@ -74,7 +72,17 @@ npm.cmd --prefix frontend ci
 dotnet dev-certs https --trust
 ```
 
-Inicia la API y el frontend en terminales separadas:
+Configura `ConnectionStrings:GoFix` mediante User Secrets en desarrollo, o `ConnectionStrings__GoFix` en el entorno de despliegue. [appsettings.Example.json](src/GoFix.Api/appsettings.Example.json) muestra las claves admitidas sin credenciales reales. Los secretos y las claves persistidas de Data Protection deben almacenarse fuera del repositorio y de la publicación.
+
+Con la conexión configurada, aplica la migración de Identidad a la base seleccionada antes de registrar cuentas. Usa credenciales de migración en el paso de despliegue correspondiente.
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+dotnet tool restore
+dotnet tool run dotnet-ef database update --project src/GoFix.Infrastructure --startup-project src/GoFix.Api
+```
+
+Inicia la API y el frontend en terminales separadas.
 
 ```powershell
 dotnet run --project src/GoFix.Api --launch-profile GoFix.Api
@@ -84,16 +92,19 @@ dotnet run --project src/GoFix.Api --launch-profile GoFix.Api
 npm.cmd --prefix frontend run dev
 ```
 
-Abre `https://localhost:3000`. Next.js envía `/api` a `https://localhost:7043`; la configuración alternativa se documenta en [frontend/.env.example](frontend/.env.example).
-
-Configura `ConnectionStrings:GoFix` mediante User Secrets en desarrollo, o `ConnectionStrings__GoFix` en el entorno de despliegue. [appsettings.Example.json](src/GoFix.Api/appsettings.Example.json) muestra las claves admitidas sin credenciales reales. Los secretos y las claves persistidas de Data Protection deben almacenarse fuera del repositorio y de la publicación.
+Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gestionar la cuenta. Next.js envía `/api` a `https://localhost:7043`. La configuración alternativa está en [frontend/.env.example](frontend/.env.example).
 
 | Ruta | Comportamiento actual |
 |---|---|
 | `/health/live` | Comprueba que el proceso responde |
 | `/health/ready` | Comprueba conexión a SQL; devuelve 503 sin conexión disponible |
-| `/api/v1/auth/csrf` | Emite token antifalsificación por HTTPS |
+| `GET /api/v1/auth/csrf` | Emite un token para el encabezado `X-CSRF-TOKEN` |
+| `POST /api/v1/auth/register` | Crea la cuenta e indica éxito sin abrir sesión |
+| `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` | Abren y cierran la sesión |
+| `GET /api/v1/auth/me`, `PUT /api/v1/cuenta` | Consultan la cuenta propia y permiten editar nombre y teléfono |
 | `/openapi/v1.json` | Contrato disponible únicamente en desarrollo |
+
+Las mutaciones de Identidad requieren el encabezado `X-CSRF-TOKEN` de la sesión actual. La cookie de sesión usa HTTPS y el servidor revoca la sesión al salir. Los valores iniciales del SRS se aplican a esta implementación. La sesión vence a los 60 minutos, la cuenta se bloquea durante 15 minutos tras cinco fallos y registro e inicio de sesión comparten el límite de diez peticiones por minuto e IP.
 
 ## Verificación y publicación
 
@@ -110,11 +121,13 @@ El smoke espera readiness 503 por defecto; añade `-EstadoReady 200` cuando SQL 
 
 Ejecuta la API publicada desde `artifacts/publish`. En despliegue configura TLS en el origen web y `GOFIX_API_TARGET` antes de compilar e iniciar Next.js. El certificado del backend debe ser confiable para Node; no desactives la validación TLS. En desarrollo, Next genera el certificado HTTPS local con `--experimental-https`.
 
+Para limitar intentos por IP detrás de Next en producción, el proxy público debe sobrescribir `X-Forwarded-For` con la IP del cliente y ser el único punto de entrada. Restringe el acceso directo a Next y a la API, y configura `ReverseProxy__KnownAddresses__0` con la IP del proceso Next vista por la API. Con la configuración predeterminada, la API usa la IP de la conexión inmediata.
+
 ```powershell
 dotnet test GoFix.slnx
 ```
 
-`GoFix.Api.Tests` comprueba errores y antifalsificación mediante el host HTTP de prueba. `GoFix.Application.Tests` recibirá pruebas al incorporar casos de uso. `GoFix.Integration.Tests` comprueba conectividad de solo lectura con una base exclusiva indicada por `GOFIX_TEST_SQLSERVER`; sin ella la prueba se omite. No crea ni elimina bases y no verifica todavía transacciones o migraciones. Las migraciones se incorporarán en un incremento posterior.
+`GoFix.Api.Tests` comprueba el contrato HTTP, la antifalsificación y la autorización. `GoFix.Integration.Tests` verifica migraciones, registro, edición, sesión e integridad con SQL Server. Configura `GOFIX_TEST_SQLSERVER` con una conexión exclusiva de pruebas que permita crear bases temporales. Las pruebas de Identidad crean y eliminan bases propias con nombre `GoFixIdentityTests_<guid>` y se omiten si falta esa configuración.
 
 ## Contribución e integración
 
