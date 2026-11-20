@@ -181,3 +181,38 @@ h1 {
 .profile-publication { font-weight: 700; color: #20584b; }
 .profile-comparison { padding: 0.85rem 1rem; margin-block: 1rem; background: #dcebe6; overflow-wrap: anywhere; }
 .profile-comparison h2 { font-size: 1.1rem; margin-block: 0 0.75rem; }
+
+.directory {
+  min-block-size: 100svh;
+  box-sizing: border-box;
+  border-block-start: 0.65rem solid #286c5e;
+  padding: clamp(1.25rem, 5vw, 4rem);
+}
+
+.directory-content { max-inline-size: 70rem; margin-inline: auto; }
+.directory a { color: #23594c; text-underline-offset: 0.2em; }
+.directory .identity-brand { color: #133936; }
+.directory-nav { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.directory h1 { max-inline-size: 22ch; font-size: clamp(2.4rem, 6vw, 4.5rem); margin-block: 0 2rem; }
+.directory h2 { font-size: 1.4rem; margin-block: 0 0.75rem; }
+.directory :focus-visible { outline: 0.15rem solid #8e3d1f; outline-offset: 0.2rem; }
+.directory-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding-block-end: 2rem; border-block-end: 1px solid #a9c2b8; }
+.directory-filters label { display: grid; gap: 0.4rem; align-content: start; }
+.directory-filters select { width: 100%; min-inline-size: 0; padding: 0.7rem; border: 1px solid #68857c; border-radius: 0.25rem; background: #fff; color: inherit; font: inherit; }
+.directory-filters .identity-button { align-self: end; }
+.directory button:disabled { opacity: 0.7; cursor: wait; }
+.directory-results { list-style: none; padding: 0; margin: 0; }
+.directory-results > li { padding-block: 1.75rem; border-block-end: 1px solid #cad8d1; }
+.directory-results p { line-height: 1.55; max-inline-size: 72ch; margin-block: 0.6rem; overflow-wrap: anywhere; }
+.directory-specialties { font-weight: 700; }
+.directory-summary { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.directory-reputation { color: #345852; }
+.directory-pagination { display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: baseline; padding-block: 1.5rem; }
+.directory-empty { padding-block: 1.5rem; max-inline-size: 55ch; }
+.directory-profile { max-inline-size: 72ch; line-height: 1.6; overflow-wrap: anywhere; }
+.directory-profile h2 { margin-block-start: 2rem; }
+.directory-description { white-space: pre-wrap; }
+
+@media (max-width: 40rem) {
+  .directory-filters { grid-template-columns: minmax(0, 1fr); }
+}
