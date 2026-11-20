@@ -413,3 +413,7 @@ Por instrucción del responsable del proyecto, el frontend usa Next.js con React
 ## Decisiones de identificadores y catálogos
 
 El responsable aprobó las decisiones ARQ-H1 y ARQ-H3. Los identificadores públicos no sustituyen la autorización por recurso. El script de catálogos usará claves estables, evitará duplicados y no sobrescribirá cambios de operación accidentalmente; las entradas en uso se desactivarán en vez de eliminarse para conservar referencias históricas. El municipio y las listas iniciales de especialidades y sectores quedan pendientes de aprobación. La implementación y las migraciones siguen pendientes.
+
+## Selección del catálogo piloto
+
+El responsable delegó la selección inicial del municipio y los catálogos. Se eligió Santo Domingo de Guzmán (Distrito Nacional), con Gazcue, Ensanche Naco, Piantini y Bella Vista. Las especialidades iniciales son electricidad, plomería, refrigeración y aire acondicionado, reparación de electrodomésticos, cerrajería y pintura. `scripts/sql/LoadInitialCatalogs.sql` registra la carga versionada e idempotente. Esta selección concreta la cobertura del piloto y permite ampliaciones posteriores por operación.

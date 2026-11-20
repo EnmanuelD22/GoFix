@@ -379,3 +379,7 @@ Por instrucción del responsable del proyecto, el frontend usa Next.js con React
 ## Decisiones aprobadas para el módulo 1
 
 El responsable aprobó que el identificador público y las referencias al técnico correspondan a `PerfilTecnico.Id`, con relación única a la cuenta. Las tablas de especialidades y sectores se crearán mediante migraciones y sus valores iniciales aprobados se cargarán mediante un script SQL versionado e idempotente, ejecutado por operación. Las entradas en uso se desactivarán para conservar referencias. El municipio y las listas iniciales siguen pendientes de aprobación. Estas decisiones no implican que el módulo ya esté implementado.
+
+## Selección del catálogo piloto
+
+El responsable delegó la selección inicial del municipio y los catálogos. Se eligió Santo Domingo de Guzmán (Distrito Nacional), con Gazcue, Ensanche Naco, Piantini y Bella Vista. Las especialidades iniciales son electricidad, plomería, refrigeración y aire acondicionado, reparación de electrodomésticos, cerrajería y pintura. `scripts/sql/LoadInitialCatalogs.sql` registra la carga versionada e idempotente. Esta selección concreta la cobertura del piloto y permite ampliaciones posteriores por operación.
