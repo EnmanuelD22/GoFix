@@ -74,13 +74,15 @@ dotnet dev-certs https --trust
 
 Configura `ConnectionStrings:GoFix` mediante User Secrets en desarrollo, o `ConnectionStrings__GoFix` en el entorno de despliegue. [appsettings.Example.json](src/GoFix.Api/appsettings.Example.json) muestra las claves admitidas sin credenciales reales. Los secretos y las claves persistidas de Data Protection deben almacenarse fuera del repositorio y de la publicación.
 
-Con la conexión configurada, aplica la migración de Identidad a la base seleccionada antes de registrar cuentas. Usa credenciales de migración en el paso de despliegue correspondiente.
+Con la conexión configurada, aplica las migraciones a la base seleccionada. Crean el esquema de Identidad, los catálogos, la cobertura técnica, las solicitudes, el historial, la idempotencia y las valoraciones. Usa credenciales de migración en el paso de despliegue correspondiente.
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 dotnet tool restore
 dotnet tool run dotnet-ef database update --project src/GoFix.Infrastructure --startup-project src/GoFix.Api
 ```
+
+Consulta la [guía de base de datos](docs/BaseDeDatos.md) para revisar el esquema, generar el SQL de despliegue y cargar los catálogos cuando se aprueben sus valores.
 
 Inicia la API y el frontend en terminales separadas.
 
