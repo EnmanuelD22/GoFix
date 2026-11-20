@@ -1,4 +1,6 @@
 using GoFix.Application.Modules.Identity;
+using GoFix.Application.Modules.Professionals;
+using GoFix.Infrastructure.Modules.Professionals;
 using GoFix.Infrastructure.Modules.Identity;
 using GoFix.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -40,6 +42,8 @@ public static class InfrastructureRegistration
             .AddSignInManager();
         services.AddScoped<IIdentityStore, EfIdentityStore>();
         services.AddScoped<IdentityService>();
+        services.AddScoped<IProfessionalStore, EfProfessionalStore>();
+        services.AddScoped<ProfessionalService>();
 
         services.AddHealthChecks().AddCheck<SqlServerHealthCheck>(
             "sql-server",

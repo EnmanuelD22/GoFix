@@ -1,5 +1,5 @@
 -- Ejecutar con la conexión a la base de GoFix después de ProfessionalsCatalogs.
--- Agregar las filas aprobadas en los dos bloques INSERT y revisar el archivo antes de ejecutarlo.
+-- Carga del piloto. Revisar conexión de destino antes de ejecutarlo.
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
@@ -13,9 +13,20 @@ DECLARE @Sectores TABLE (
     Municipio nvarchar(100) NOT NULL
 );
 
--- Insertar aquí las especialidades y los sectores aprobados.
--- INSERT INTO @Especialidades (Codigo, Nombre) VALUES (...);
--- INSERT INTO @Sectores (Codigo, Nombre, Municipio) VALUES (...);
+-- Seleccion inicial del piloto, delegada por el responsable del producto.
+INSERT INTO @Especialidades (Codigo, Nombre) VALUES
+('electricidad', N'Electricidad'),
+('plomeria', N'Plomería'),
+('refrigeracion', N'Refrigeración y aire acondicionado'),
+('electrodomesticos', N'Reparación de electrodomésticos'),
+('cerrajeria', N'Cerrajería'),
+('pintura', N'Pintura');
+
+INSERT INTO @Sectores (Codigo, Nombre, Municipio) VALUES
+('sdg-gazcue', N'Gazcue', N'Santo Domingo de Guzmán'),
+('sdg-ensanche-naco', N'Ensanche Naco', N'Santo Domingo de Guzmán'),
+('sdg-piantini', N'Piantini', N'Santo Domingo de Guzmán'),
+('sdg-bella-vista', N'Bella Vista', N'Santo Domingo de Guzmán');
 
 IF NOT EXISTS (SELECT 1 FROM @Especialidades) OR NOT EXISTS (SELECT 1 FROM @Sectores)
     THROW 51000, N'Completa los catálogos iniciales con los datos aprobados antes de ejecutar la carga.', 1;
