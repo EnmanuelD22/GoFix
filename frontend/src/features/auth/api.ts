@@ -15,7 +15,7 @@ export class ErrorApi extends Error {
   }
 }
 
-async function solicitar<T>(ruta: string, opciones?: RequestInit): Promise<T> {
+export async function solicitar<T>(ruta: string, opciones?: RequestInit): Promise<T> {
   const respuesta = await fetch(`/api/v1${ruta}`, {
     ...opciones, credentials: 'same-origin', cache: 'no-store',
   });

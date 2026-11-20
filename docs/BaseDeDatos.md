@@ -38,7 +38,13 @@ sqlcmd -S '<servidor>' -d '<base-de-GoFix>' -E -b -I -i artifacts/GoFix.migratio
 
 ## Cargar catálogos
 
-Las migraciones dejan vacíos los catálogos hasta que se aprueben el municipio, las especialidades y los sectores iniciales. Completa los dos bloques de inserción en una copia revisada de la plantilla y ejecútala contra la base de GoFix después de aplicar las migraciones. [Plantilla de carga SQL](../scripts/sql/LoadInitialCatalogs.sql)
+El piloto seleccionado por delegación del responsable del producto usa Santo Domingo de Guzmán, Distrito Nacional. El script carga seis especialidades (electricidad, plomería, refrigeración y aire acondicionado, reparación de electrodomésticos, cerrajería y pintura) y cuatro sectores (Gazcue, Ensanche Naco, Piantini y Bella Vista). Ejecuta la carga después de aplicar las migraciones y verifica la conexión de destino. [Script de carga SQL](../scripts/sql/LoadInitialCatalogs.sql)
+
+Los nombres territoriales se contrastaron con el plan municipal de la Alcaldía del Distrito Nacional. La selección es acotada para el piloto y se puede ampliar por operación. [Plan municipal](https://www.sismap.gob.do/Municipal/uploads/evidencias/637462984116335145-5%29-2020-2024-PLAN-MUNICIPAL-DE-DESARROLLO-20.11.2020.pdf)
+
+```powershell
+sqlcmd -S localhost -d GoFixDB -E -b -I -f 65001 -i scripts/sql/LoadInitialCatalogs.sql
+```
 
 - Asigna a cada fila un `Codigo` estable de hasta 64 caracteres. Empieza con letra minúscula ASCII o dígito y usa solo esas letras, dígitos y guiones. Conserva el código si el nombre visible cambia.
 - Utiliza nombres de hasta 100 caracteres. La especialidad tiene nombre único y el sector tiene nombre único dentro de su municipio.

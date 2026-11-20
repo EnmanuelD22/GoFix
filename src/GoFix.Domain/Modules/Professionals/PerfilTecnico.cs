@@ -17,4 +17,12 @@ public sealed class PerfilTecnico
     public Guid Id { get; private set; }
     public Guid UsuarioId { get; private set; }
     public string Descripcion { get; private set; } = "";
+
+    /// <summary>La descripción del perfil publicado es texto simple con longitud limitada.</summary>
+    public void EditarDescripcion(string descripcion)
+    {
+        if (descripcion.Length is < 50 or > 1000)
+            throw new ArgumentException("La descripción debe tener entre 50 y 1.000 caracteres.", nameof(descripcion));
+        Descripcion = descripcion;
+    }
 }

@@ -6,7 +6,7 @@ Plataforma web para conectar clientes con técnicos de su zona. El producto cont
 
 La base técnica está implementada: solución por capas, host ASP.NET Core, configuración de EF Core para SQL Server, diagnósticos de disponibilidad, errores HTTP con Problem Details, emisión de token antifalsificación, OpenAPI de desarrollo y una página inicial Next.js con React. Next.js se ejecuta en un proceso Node separado y reenvía `/api` al backend HTTPS.
 
-Identidad permite registrar cuentas de cliente y técnico, iniciar y cerrar sesión, consultar la sesión y editar el nombre y el teléfono propios. El registro técnico crea un perfil inicial sin publicar. La edición profesional, los catálogos, la búsqueda y el CRUD de servicios siguen en la lista de implementación.
+Identidad permite registrar cuentas de cliente y técnico, iniciar y cerrar sesión, consultar la sesión y editar el nombre y el teléfono propios. El registro técnico crea un perfil inicial sin publicar. Los técnicos pueden completar su perfil con descripción, especialidades y sectores activos. La búsqueda y el CRUD de servicios siguen en la lista de implementación.
 
 ## Stack tecnológico
 
@@ -42,7 +42,7 @@ Domain permanece independiente de frameworks. Los endpoints de negocio invocan c
 Marca cada casilla cuando el alcance indicado esté implementado y verificado. Los criterios detallados están en el SRS.
 
 - [x] **1. Identidad (RF-01 a RF-03).** Registro de cliente o técnico, alta atómica del perfil técnico inicial, acceso y salida con cookie, consulta de sesión y edición de la cuenta propia.
-- [ ] **1. Profesionales y catálogos (RF-04 y RF-05).** Edición y publicación del perfil profesional, selección de especialidades y sectores activos, y carga inicial de los catálogos.
+- [x] **1. Profesionales y catálogos (RF-04 y RF-05).** Edición y publicación del perfil profesional, selección de especialidades y sectores activos, y carga inicial de los catálogos.
 - [ ] **2. Consulta de profesionales (RF-06 y RF-07).** Búsqueda paginada por especialidad y sector, perfil público y reputación sin exponer contactos privados.
 - [ ] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
 - [ ] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
@@ -55,7 +55,7 @@ Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y prueba
 
 ### Decisiones previas a la implementación
 
-El responsable aprobó usar `PerfilTecnicoId` como identificador público y referencia del técnico. Las migraciones crearán las tablas de catálogos y un script SQL versionado e idempotente cargará los valores iniciales aprobados. Quedan por decidir el municipio, las especialidades y los sectores iniciales. Siguen abiertas las observaciones sobre tipos temporales, expiración de sesión, ubicación de valoraciones y catálogo de errores (ARQ-H2, H4, H5 y H6), además de las políticas y metas propuestas en Especificaciones y SRS.
+El responsable aprobó usar `PerfilTecnicoId` como identificador público y referencia del técnico. Las migraciones crearán las tablas de catálogos y un script SQL versionado e idempotente cargará los valores iniciales aprobados. El piloto seleccionado por delegación del responsable usa Santo Domingo de Guzmán, seis especialidades y cuatro sectores. La carga está en `scripts/sql/LoadInitialCatalogs.sql`. Siguen abiertas las observaciones sobre tipos temporales, expiración de sesión, ubicación de valoraciones y catálogo de errores (ARQ-H2, H4, H5 y H6), además de las políticas y metas propuestas en Especificaciones y SRS.
 
 La rama histórica `feature/usuarios-perfiles` entregó la base técnica y ya completó sus tres PR. El trabajo funcional pendiente requiere ramas nuevas desde `dev` actualizado, con nombres que describan su contenido.
 
@@ -94,7 +94,7 @@ dotnet run --project src/GoFix.Api --launch-profile GoFix.Api
 npm.cmd --prefix frontend run dev
 ```
 
-Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gestionar la cuenta. Next.js envía `/api` a `https://localhost:7043`. La configuración alternativa está en [frontend/.env.example](frontend/.env.example).
+Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gestionar la cuenta. Los técnicos pueden editar su descripción y cobertura en `/tecnico/perfil`. Next.js envía `/api` a `https://localhost:7043`. La configuración alternativa está en [frontend/.env.example](frontend/.env.example).
 
 | Ruta | Comportamiento actual |
 |---|---|
@@ -104,6 +104,8 @@ Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gesti
 | `POST /api/v1/auth/register` | Crea la cuenta e indica éxito sin abrir sesión |
 | `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` | Abren y cierran la sesión |
 | `GET /api/v1/auth/me`, `PUT /api/v1/cuenta` | Consultan la cuenta propia y permiten editar nombre y teléfono |
+| `GET /api/v1/especialidades`, `GET /api/v1/sectores` | Entregan las opciones activas del catálogo piloto |
+| `GET /api/v1/tecnicos/me/perfil`, `PUT /api/v1/tecnicos/me/perfil` | Consultan y editan el perfil del técnico autenticado con control de versión |
 | `/openapi/v1.json` | Contrato disponible únicamente en desarrollo |
 
 Las mutaciones de Identidad requieren el encabezado `X-CSRF-TOKEN` de la sesión actual. La cookie de sesión usa HTTPS y el servidor revoca la sesión al salir. Los valores iniciales del SRS se aplican a esta implementación. La sesión vence a los 60 minutos, la cuenta se bloquea durante 15 minutos tras cinco fallos y registro e inicio de sesión comparten el límite de diez peticiones por minuto e IP.
