@@ -6,7 +6,7 @@ Plataforma web para conectar clientes con técnicos de su zona. El producto cont
 
 La base técnica está implementada: solución por capas, host ASP.NET Core, configuración de EF Core para SQL Server, diagnósticos de disponibilidad, errores HTTP con Problem Details, emisión de token antifalsificación, OpenAPI de desarrollo y una página inicial Next.js con React. Next.js se ejecuta en un proceso Node separado y reenvía `/api` al backend HTTPS.
 
-Identidad permite registrar cuentas de cliente y técnico, iniciar y cerrar sesión, consultar la sesión y editar el nombre y el teléfono propios. El registro técnico crea un perfil inicial sin publicar. Los técnicos pueden completar su perfil con descripción, especialidades y sectores activos. El directorio público permite buscar técnicos publicados y consultar su ficha y reputación agregada. El CRUD de servicios sigue en la lista de implementación.
+Identidad permite registrar cuentas de cliente y técnico, iniciar y cerrar sesión, consultar la sesión y editar el nombre y el teléfono propios. El registro técnico crea un perfil inicial sin publicar. Los técnicos pueden completar su perfil con descripción, especialidades y sectores activos. El directorio público permite buscar técnicos publicados y consultar su ficha y reputación agregada. Los clientes pueden crear solicitudes desde el perfil de un técnico, consultar sus solicitudes y editar o eliminar las pendientes. Los técnicos pueden consultar las solicitudes que tienen asignadas.
 
 ## Stack tecnológico
 
@@ -44,7 +44,7 @@ Marca cada casilla cuando el alcance indicado esté implementado y verificado. L
 - [x] **1. Identidad (RF-01 a RF-03).** Registro de cliente o técnico, alta atómica del perfil técnico inicial, acceso y salida con cookie, consulta de sesión y edición de la cuenta propia.
 - [x] **1. Profesionales y catálogos (RF-04 y RF-05).** Edición y publicación del perfil profesional, selección de especialidades y sectores activos, y carga inicial de los catálogos.
 - [x] **2. Consulta de profesionales (RF-06 y RF-07).** Búsqueda paginada por especialidad y sector, perfil público y reputación sin exponer contactos privados.
-- [ ] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
+- [x] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
 - [ ] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
 - [ ] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
 - [ ] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
@@ -117,7 +117,13 @@ Accede a `/tecnicos` para filtrar por especialidad y sector. La página conserva
 
 La API admite `especialidadId`, `sectorId`, `page` (inicial 1) y `pageSize` (inicial 20, máximo 50). Devuelve `items`, `page`, `pageSize` y `total`. Los perfiles incompletos o sin cobertura activa quedan fuera del directorio y su detalle devuelve 404. Las respuestas públicas conservan la privacidad de los datos de cuenta.
 
-El promedio y la cantidad se calculan desde las valoraciones persistidas mediante un contrato del módulo Valoraciones. La creación de solicitudes, el envío de opiniones y su listado detallado se desarrollan en los incrementos correspondientes.
+El promedio y la cantidad se calculan desde las valoraciones persistidas mediante un contrato del módulo Valoraciones. El envío de opiniones y su listado detallado están previstos en el módulo 5.
+
+## Solicitudes de servicio
+
+Desde la ficha pública de un técnico, selecciona «Solicitar servicio». El cliente puede filtrar sus solicitudes por estado en `/cliente/solicitudes` y abrir el detalle para editar o eliminar una solicitud pendiente. La eliminación pide confirmación y retira la solicitud de ambas listas. El técnico consulta las solicitudes asignadas en `/tecnico/solicitudes`.
+
+La API expone `POST /api/v1/solicitudes` con el encabezado `Idempotency-Key`, y `GET /api/v1/solicitudes` con los filtros `estado`, `page` y `pageSize`. Para el detalle se usa `GET /api/v1/solicitudes/{id}`. La edición usa `PUT` con `version` en el cuerpo y la eliminación usa `DELETE` con `X-Resource-Version`. Si la versión cambió, vuelve a consultar el detalle antes de reintentar.
 
 ## Verificación y publicación
 

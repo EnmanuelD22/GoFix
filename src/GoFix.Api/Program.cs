@@ -1,6 +1,7 @@
 using GoFix.Api;
 using GoFix.Api.Modules.Identity;
 using GoFix.Api.Modules.Professionals;
+using GoFix.Api.Modules.Services;
 using GoFix.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.DataProtection;
@@ -47,6 +48,7 @@ var api = app.MapGroup("/api/v1");
 api.MapGoFixApi();
 api.MapIdentityEndpoints();
 api.MapProfessionalEndpoints();
+api.MapServiceRequestEndpoints();
 
 app.Run();
 

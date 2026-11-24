@@ -169,6 +169,7 @@ export function PerfilPublico({ id }: { id: string }) {
     {Boolean(error) && !noDisponible && <Fallo error={error} reintentar={() => setIntento(intento + 1)} />}
     {perfil && <article className="directory-profile">
       <Reputacion tecnico={perfil} />
+      <p><Link className="request-start" href={'/cliente/solicitudes/nueva?tecnico=' + encodeURIComponent(perfil.id)}>Solicitar servicio</Link></p>
       <h2>Servicios</h2>
       <p className="directory-description">{perfil.descripcion}</p>
       <h2>Especialidades</h2>
