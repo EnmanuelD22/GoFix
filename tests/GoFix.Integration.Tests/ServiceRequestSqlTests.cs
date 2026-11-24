@@ -12,7 +12,7 @@ using Xunit;
 
 namespace GoFix.Integration.Tests;
 
-public sealed class ServiceRequestSqlTests : IAsyncLifetime
+public sealed partial class ServiceRequestSqlTests : IAsyncLifetime
 {
     private const string Requests = "/api/v1/solicitudes";
     private const string Profile = "/api/v1/tecnicos/me/perfil";

@@ -55,6 +55,27 @@ public sealed class ServiceRequestService(IRepositorioSolicitudes store, TimePro
             : store.DeleteAsync(userId, id, parsedVersion, clock.GetUtcNow(), ct);
     }
 
+
+    public Task<ServiceRequestResult> TransitionAsync(Guid userId, bool isTechnician, Guid id, string action,
+        TransitionServiceRequest input, CancellationToken ct)
+    {
+        input = input with { Motivo = input.Motivo?.Trim(), Observacion = input.Observacion?.Trim() };
+        var version = ParseVersion(input.Version);
+        if (version is null)
+            return Error("version_invalida");
+        if ((action is "rechazar" or "cancelar" && input.Motivo is not { Length: >= 10 and <= 500 })
+            || (action == "completar" && input.Observacion is { Length: > 1000 })
+            || (action == "aceptar" && (input.FechaConfirmada is null || input.FechaConfirmada <= clock.GetUtcNow())))
+            return Error("transicion_invalida");
+        return store.TransitionAsync(userId, isTechnician, id, action, input, version, clock.GetUtcNow(), ct);
+    }
+
+    public Task<RequestHistoryResult> HistoryAsync(Guid userId, bool isTechnician, Guid id, CancellationToken ct) =>
+        store.HistoryAsync(userId, isTechnician, id, ct);
+
+    public Task<TechnicianSummary> SummaryAsync(Guid userId, CancellationToken ct) =>
+        store.SummaryAsync(userId, clock.GetUtcNow(), ct);
+
     private static bool ValidFields(int sector, string? title, string? description, string? address,
         DateTimeOffset date) => sector > 0 && title is { Length: >= 10 and <= 120 }
         && description is { Length: >= 20 and <= 2000 } && address is { Length: >= 10 and <= 300 }

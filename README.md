@@ -45,7 +45,7 @@ Marca cada casilla cuando el alcance indicado esté implementado y verificado. L
 - [x] **1. Profesionales y catálogos (RF-04 y RF-05).** Edición y publicación del perfil profesional, selección de especialidades y sectores activos, y carga inicial de los catálogos.
 - [x] **2. Consulta de profesionales (RF-06 y RF-07).** Búsqueda paginada por especialidad y sector, perfil público y reputación sin exponer contactos privados.
 - [x] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
-- [ ] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
+- [x] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
 - [ ] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
 - [ ] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
 - [ ] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
@@ -124,6 +124,14 @@ El promedio y la cantidad se calculan desde las valoraciones persistidas mediant
 Desde la ficha pública de un técnico, selecciona «Solicitar servicio». El cliente puede filtrar sus solicitudes por estado en `/cliente/solicitudes` y abrir el detalle para editar o eliminar una solicitud pendiente. La eliminación pide confirmación y retira la solicitud de ambas listas. El técnico consulta las solicitudes asignadas en `/tecnico/solicitudes`.
 
 La API expone `POST /api/v1/solicitudes` con el encabezado `Idempotency-Key`, y `GET /api/v1/solicitudes` con los filtros `estado`, `page` y `pageSize`. Para el detalle se usa `GET /api/v1/solicitudes/{id}`. La edición usa `PUT` con `version` en el cuerpo y la eliminación usa `DELETE` con `X-Resource-Version`. Si la versión cambió, vuelve a consultar el detalle antes de reintentar.
+
+## Seguimiento de servicios
+
+En el detalle de una solicitud, el técnico puede aceptar con fecha confirmada futura, rechazar con motivo, iniciar y completar el trabajo. El cliente puede cancelar una pendiente y ambos participantes pueden cancelar una aceptada con motivo. Cada acción exige la versión vigente y registra su actor, fecha y cambio de estado en el historial.
+
+El contacto de la contraparte aparece después de la aceptación y se conserva al cancelar un servicio que había sido aceptado. El panel de `/tecnico/panel` muestra pendientes, aceptadas, servicios en proceso y las próximas diez visitas futuras.
+
+La API añade `POST /api/v1/solicitudes/{id}/{aceptar|rechazar|cancelar|iniciar|completar}`, `GET /api/v1/solicitudes/{id}/historial` y `GET /api/v1/tecnicos/me/resumen`. Las transiciones envían `version` y los datos de la acción. Un conflicto HTTP 409 requiere consultar de nuevo el detalle antes de confirmar otra acción.
 
 ## Verificación y publicación
 

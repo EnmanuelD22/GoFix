@@ -243,3 +243,12 @@ h1 {
   display: inline-block; padding: 0.65rem 1rem; background: #20584b; color: #fff;
   border-radius: 0.25rem; text-decoration: none; font-weight: 700;
 }
+
+.requests-history { margin-block-start: 2rem; }
+.requests-history ol { padding-inline-start: 1.4rem; }
+.requests-history li { padding-block: 0.5rem; border-block-end: 1px solid #bdd0c6; overflow-wrap: anywhere; }
+.requests-history p { margin-block: 0.35rem; }
+.requests-counts { display: flex; flex-wrap: wrap; gap: 1.5rem; list-style: none; padding: 0; margin-block: 2rem; }
+.requests-counts a { display: grid; gap: 0.5rem; }
+.requests-counts strong { font-size: 2rem; }
+.requests-detail section { margin-block: 1.5rem; }

@@ -159,6 +159,7 @@ export function MiCuenta() {
         </dl>
         {cuenta.rol === 'tecnico' ? <p><Link href="/tecnico/solicitudes">Solicitudes asignadas</Link></p>
           : <p><Link href="/cliente/solicitudes">Mis solicitudes</Link></p>}
+        {cuenta.rol === 'tecnico' && <p><Link href="/tecnico/panel">Mi agenda de servicios</Link></p>}
         {cuenta.rol === 'tecnico' && <p><Link href="/tecnico/perfil">Editar mi perfil profesional</Link></p>}
         {guardado && <p role="status" className="identity-success">Cambios guardados.</p>}
         <form key={`${cuenta.nombre}\n${cuenta.telefono}`} method="post" onSubmit={editar} aria-busy={ocupado}>
