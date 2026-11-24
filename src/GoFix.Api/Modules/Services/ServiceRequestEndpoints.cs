@@ -10,7 +10,8 @@ internal static class ServiceRequestEndpoints
     internal static void MapServiceRequestEndpoints(this RouteGroupBuilder api)
     {
         var requests = api.MapGroup("/solicitudes").WithTags("Solicitudes")
-            .RequireAuthorization(policy => policy.RequireRole(AccountRole.Customer, AccountRole.Technician));
+            .RequireAuthorization(policy => policy.RequireRole(AccountRole.Customer, AccountRole.Technician))
+            .WithDescription("Errores Problem Details con code y traceId. 400: solicitud_invalida, cobertura_invalida, version_invalida, clave_idempotencia_invalida, transicion_invalida. 404: solicitud_no_encontrada. 409: estado_invalido, conflicto_version, idempotencia_conflicto, recurso_eliminado. 401/403: sesion o rol incompatible.");
         requests.AddEndpointFilter(async (context, next) =>
         {
             context.HttpContext.Response.Headers.CacheControl = "no-store";
@@ -19,8 +20,28 @@ internal static class ServiceRequestEndpoints
 
         requests.MapGet("", ListAsync).Produces<ServiceRequestPage>()
             .ProducesValidationProblem().ProducesProblem(401).ProducesProblem(403);
-        requests.MapGet("/{id:guid}", GetAsync).Produces<ServiceRequestDetail>()
+        requests.MapGet("/{id:guid}", GetAsync)
+            .WithDescription("Detalle propio o asignado. Contacto contiene nombre y telefono de la contraparte cuando existe aceptadaAtUtc y la solicitud sigue visible. Fechas de visita conservan su desplazamiento horario.")
+            .Produces<ServiceRequestDetail>()
             .ProducesProblem(401).ProducesProblem(403).ProducesProblem(404);
+
+
+        requests.MapGet("/{id:guid}/historial", HistoryAsync).Produces<RequestHistoryItem[]>()
+            .ProducesProblem(401).ProducesProblem(403).ProducesProblem(404);
+        foreach (var action in new[] { "aceptar", "rechazar", "cancelar", "iniciar", "completar" })
+        {
+            var route = requests.MapPost("/{id:guid}/" + action,
+                (Guid id, TransitionServiceRequest input, HttpContext context, ServiceRequestService service,
+                    CancellationToken ct) => TransitionAsync(id, action, input, context, service, ct))
+                .Produces<ServiceRequestDetail>().ProducesProblem(400).ProducesProblem(401)
+                .ProducesProblem(403).ProducesProblem(404).ProducesProblem(409);
+            if (action != "cancelar")
+                route.RequireAuthorization(policy => policy.RequireRole(AccountRole.Technician));
+        }
+        api.MapGet("/tecnicos/me/resumen", SummaryAsync).WithTags("Seguimiento")
+            .RequireAuthorization(policy => policy.RequireRole(AccountRole.Technician))
+            .WithDescription("Conteos operativos propios por estado y hasta diez visitas aceptadas futuras, ordenadas por fecha confirmada e identificador. Excluye solicitudes eliminadas.")
+            .Produces<TechnicianSummary>().ProducesProblem(401).ProducesProblem(403);
 
         var client = requests.MapGroup("").RequireAuthorization(policy => policy.RequireRole(AccountRole.Customer));
         client.MapPost("", CreateAsync).Produces<ServiceRequestDetail>(201).Produces<ServiceRequestDetail>()
@@ -103,6 +124,34 @@ internal static class ServiceRequestEndpoints
         return result.Code is null ? Results.NoContent() : ToProblem(result.Code);
     }
 
+
+    private static async Task<IResult> TransitionAsync(Guid id, string action, TransitionServiceRequest input,
+        HttpContext context, ServiceRequestService service, CancellationToken ct)
+    {
+        if (!IdentityEndpoints.TryGetSession(context.User, out var userId, out _))
+            return Results.Unauthorized();
+        var result = await service.TransitionAsync(userId, context.User.IsInRole(AccountRole.Technician), id,
+            action, input, ct);
+        return result.Code is null ? Results.Ok(result.Item) : ToProblem(result.Code);
+    }
+
+    private static async Task<IResult> HistoryAsync(Guid id, HttpContext context,
+        ServiceRequestService service, CancellationToken ct)
+    {
+        if (!IdentityEndpoints.TryGetSession(context.User, out var userId, out _))
+            return Results.Unauthorized();
+        var result = await service.HistoryAsync(userId, context.User.IsInRole(AccountRole.Technician), id, ct);
+        return result.Code is null ? Results.Ok(result.Items) : ToProblem(result.Code);
+    }
+
+    private static async Task<IResult> SummaryAsync(HttpContext context, ServiceRequestService service, CancellationToken ct)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        if (!IdentityEndpoints.TryGetSession(context.User, out var userId, out _))
+            return Results.Unauthorized();
+        return Results.Ok(await service.SummaryAsync(userId, ct));
+    }
+
     private static IResult ToProblem(string code)
     {
         var (status, title) = code switch
@@ -112,7 +161,8 @@ internal static class ServiceRequestEndpoints
             "version_invalida" => (400, "La versión de la solicitud es inválida."),
             "solicitud_no_encontrada" => (404, "No se encontró la solicitud."),
             "cobertura_invalida" => (400, "El técnico no tiene cobertura activa para esta especialidad y sector."),
-            "estado_invalido" => (409, "Solo puedes modificar o eliminar solicitudes pendientes."),
+            "estado_invalido" => (409, "La acción no está disponible en el estado actual de la solicitud."),
+            "transicion_invalida" => (400, "Revisa la fecha confirmada, el motivo o la observación de la acción."),
             "conflicto_version" => (409, "La solicitud cambió. Consulta su versión actual antes de volver a guardar."),
             "idempotencia_conflicto" => (409, "La clave de idempotencia ya se usó con otros datos."),
             "recurso_eliminado" => (409, "La solicitud original ya fue eliminada."),

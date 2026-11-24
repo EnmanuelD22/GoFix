@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ErrorApi, guardar, solicitar, type Cuenta } from '../auth/api';
+import { Seguimiento } from './request-tracking';
 
 const estados = {
   Pendiente: 'Pendiente', Aceptada: 'Aceptada', Rechazada: 'Rechazada',
@@ -23,6 +24,10 @@ export type Solicitud = {
   fechaPreferida: string;
   estado: keyof typeof estados;
   version: string;
+  fechaConfirmada?: string | null;
+  inicioAtUtc?: string | null;
+  finAtUtc?: string | null;
+  contacto?: { nombre: string; telefono: string } | null;
 };
 
 type ResumenSolicitud = Pick<Solicitud, 'id' | 'titulo' | 'estado' | 'fechaPreferida'>;
@@ -56,6 +61,7 @@ export function Marco({ titulo, children }: { titulo: string; children: ReactNod
       <nav className="directory-nav" aria-label="Navegación principal">
         <Link href="/" className="brand identity-brand">GoFix</Link>
         <Link href="/cuenta">Mi cuenta</Link>
+
       </nav>
       <h1>{titulo}</h1>
       {children}
@@ -184,6 +190,7 @@ export function DetalleSolicitud({ id }: { id: string }) {
         <Link href={ruta + '/editar'}>Editar solicitud</Link>
         <button type="button" onClick={() => dialogo.current?.showModal()}>Eliminar solicitud</button>
       </div>}
+      {cuenta.datos && <Seguimiento key={item.version} item={item} rol={cuenta.datos.rol} recargar={detalle.reintentar} />}
       <dialog ref={dialogo} aria-labelledby="confirmar-eliminacion" onCancel={event => { if (eliminando) event.preventDefault(); }}>
         <h2 id="confirmar-eliminacion">¿Eliminar esta solicitud?</h2>
         <p>La solicitud dejará de aparecer en tu lista y en la del técnico.</p>

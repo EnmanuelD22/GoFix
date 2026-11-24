@@ -75,7 +75,8 @@ internal sealed class EfServiceRequestStore(GoFixDbContext db) : IRepositorioSol
     public async Task<ServiceRequestResult> GetAsync(Guid userId, bool isTechnician, Guid id, CancellationToken ct)
     {
         var request = await VisibleTo(userId, isTechnician).SingleOrDefaultAsync(row => row.Id == id, ct);
-        return request is null ? new(Code: "solicitud_no_encontrada") : new(Detail(request));
+        return request is null ? new(Code: "solicitud_no_encontrada")
+            : new(await DetailForAsync(request, userId, ct));
     }
 
     public async Task<ServiceRequestResult> UpdateAsync(Guid userId, Guid id, UpdateServiceRequest input,
@@ -116,6 +117,82 @@ internal sealed class EfServiceRequestStore(GoFixDbContext db) : IRepositorioSol
         return await SaveMutationAsync(request, userId, TipoEventoSolicitud.Eliminacion, now, ct);
     }
 
+
+    public async Task<ServiceRequestResult> TransitionAsync(Guid userId, bool isTechnician, Guid id, string action,
+        TransitionServiceRequest input, byte[] version, DateTimeOffset now, CancellationToken ct)
+    {
+        var request = await VisibleTo(userId, isTechnician).AsTracking().SingleOrDefaultAsync(row => row.Id == id, ct);
+        if (request is null)
+            return new(Code: "solicitud_no_encontrada");
+        if (!request.RowVersion.AsSpan().SequenceEqual(version))
+            return new(Code: "conflicto_version");
+        if (!request.PuedeTransicionar(action, isTechnician))
+            return new(Code: "estado_invalido");
+        if (action == "aceptar" && (input.FechaConfirmada is null || input.FechaConfirmada <= now))
+            return new(Code: "transicion_invalida");
+
+        var previous = request.Estado;
+        request.Transicionar(action, isTechnician, input.FechaConfirmada, now);
+        db.Add(new HistorialSolicitud
+        {
+            SolicitudId = id, ActorId = userId, TipoEvento = TipoEventoSolicitud.Transicion,
+            EstadoPrevio = previous, EstadoNuevo = request.Estado, CreatedAtUtc = now.UtcDateTime,
+            Observacion = action is "rechazar" or "cancelar" ? input.Motivo : action == "completar" ? input.Observacion : null
+        });
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            return new(Code: "conflicto_version");
+        }
+        return new(await DetailForAsync(request, userId, ct));
+    }
+
+    public async Task<RequestHistoryResult> HistoryAsync(Guid userId, bool isTechnician, Guid id, CancellationToken ct)
+    {
+        if (!await VisibleTo(userId, isTechnician).AnyAsync(row => row.Id == id, ct))
+            return new(Code: "solicitud_no_encontrada");
+        var items = await (from entry in db.Set<HistorialSolicitud>().AsNoTracking()
+            join actor in db.Users on entry.ActorId equals actor.Id
+            where entry.SolicitudId == id
+            orderby entry.CreatedAtUtc, entry.Id
+            select new RequestHistoryItem(entry.Id, entry.ActorId, actor.Nombre, entry.TipoEvento,
+                entry.EstadoPrevio, entry.EstadoNuevo, DateTime.SpecifyKind(entry.CreatedAtUtc, DateTimeKind.Utc),
+                entry.Observacion)).ToArrayAsync(ct);
+        return new(items);
+    }
+
+    public async Task<TechnicianSummary> SummaryAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
+    {
+        var requests = VisibleTo(userId, true);
+        var counts = await requests.GroupBy(row => row.Estado)
+            .Select(group => new { Estado = group.Key, Total = group.Count() }).ToArrayAsync(ct);
+        int Count(EstadoSolicitud state) => counts.FirstOrDefault(row => row.Estado == state)?.Total ?? 0;
+        var visits = await requests.Where(row => row.Estado == EstadoSolicitud.Aceptada && row.FechaConfirmada >= now)
+            .OrderBy(row => row.FechaConfirmada).ThenBy(row => row.Id).Take(10)
+            .Select(row => new UpcomingVisit(row.Id, row.Titulo, row.FechaConfirmada!.Value)).ToArrayAsync(ct);
+        return new(Count(EstadoSolicitud.Pendiente), Count(EstadoSolicitud.Aceptada),
+            Count(EstadoSolicitud.EnProceso), visits);
+    }
+
+    private async Task<ServiceRequestDetail> DetailForAsync(SolicitudServicio request, Guid userId, CancellationToken ct)
+    {
+        RequestContact? contact = null;
+        if (request.AceptadaAtUtc is not null && !request.IsDeleted)
+        {
+            var counterpart = userId == request.ClienteId
+                ? await db.PerfilesTecnicos.Where(profile => profile.Id == request.TecnicoId)
+                    .Select(profile => profile.UsuarioId).SingleAsync(ct)
+                : request.ClienteId;
+            contact = await db.Users.Where(user => user.Id == counterpart)
+                .Select(user => new RequestContact(user.Nombre, user.PhoneNumber!)).SingleAsync(ct);
+        }
+        return Detail(request) with { Contacto = contact };
+    }
+
     private IQueryable<SolicitudServicio> VisibleTo(Guid userId, bool isTechnician)
     {
         var requests = db.Set<SolicitudServicio>().AsNoTracking().Where(request => !request.IsDeleted);
@@ -145,7 +222,7 @@ internal sealed class EfServiceRequestStore(GoFixDbContext db) : IRepositorioSol
             return new(Code: "idempotencia_conflicto");
         return existing.Request.IsDeleted
             ? new(Code: "recurso_eliminado")
-            : new(Detail(existing.Request), Replay: true);
+            : new(await DetailForAsync(existing.Request, userId, ct), Replay: true);
     }
 
     private static string? CheckMutation(SolicitudServicio? request, byte[] version)
@@ -187,5 +264,6 @@ internal sealed class EfServiceRequestStore(GoFixDbContext db) : IRepositorioSol
     private static ServiceRequestDetail Detail(SolicitudServicio request) =>
         new(request.Id, request.TecnicoId, request.EspecialidadId, request.SectorId, request.Titulo,
             request.Descripcion, request.Direccion, request.FechaPreferida, request.Estado,
-            DateTime.SpecifyKind(request.CreatedAtUtc, DateTimeKind.Utc), Convert.ToBase64String(request.RowVersion));
+            DateTime.SpecifyKind(request.CreatedAtUtc, DateTimeKind.Utc), Convert.ToBase64String(request.RowVersion), request.FechaConfirmada,
+            request.AceptadaAtUtc, request.InicioAtUtc, request.FinAtUtc);
 }
