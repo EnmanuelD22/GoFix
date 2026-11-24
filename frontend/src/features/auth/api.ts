@@ -7,7 +7,7 @@ export type Cuenta = {
   perfilTecnicoId: string | null;
 };
 
-type Problema = { title?: string; traceId?: string; errors?: Record<string, string[]> };
+type Problema = { code?: string; title?: string; traceId?: string; errors?: Record<string, string[]> };
 
 export class ErrorApi extends Error {
   constructor(public status: number, public problema: Problema) {
@@ -32,12 +32,12 @@ export function consultarCuenta(signal?: AbortSignal) {
   return solicitar<Cuenta>('/auth/me', { signal });
 }
 
-export async function guardar<T = void>(ruta: string, metodo: 'POST' | 'PUT', datos?: object) {
+export async function guardar<T = void>(ruta: string, metodo: 'POST' | 'PUT' | 'DELETE', datos?: object, encabezados?: Record<string, string>) {
   // Un token de una sesión anterior no es válido después de entrar o salir.
   const { token } = await solicitar<{ token: string }>('/auth/csrf');
   return solicitar<T>(ruta, {
     method: metodo,
-    headers: { 'X-CSRF-TOKEN': token, ...(datos ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { ...encabezados, 'X-CSRF-TOKEN': token, ...(datos ? { 'Content-Type': 'application/json' } : {}) },
     body: datos ? JSON.stringify(datos) : undefined,
   });
 }

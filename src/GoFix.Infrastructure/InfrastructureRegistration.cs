@@ -1,3 +1,5 @@
+using GoFix.Application.Modules.Services;
+using GoFix.Infrastructure.Modules.Services;
 using GoFix.Application.Modules.Identity;
 using GoFix.Application.Modules.Professionals;
 using GoFix.Application.Modules.Reviews;
@@ -49,6 +51,8 @@ public static class InfrastructureRegistration
         services.AddScoped<IProfessionalDirectory, EfProfessionalDirectory>();
         services.AddScoped<DirectoryService>();
         services.AddScoped<IReviewQuery, EfReviewQuery>();
+        services.AddScoped<IRepositorioSolicitudes, EfServiceRequestStore>();
+        services.AddScoped<ServiceRequestService>();
 
         services.AddHealthChecks().AddCheck<SqlServerHealthCheck>(
             "sql-server",
