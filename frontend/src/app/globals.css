@@ -216,3 +216,30 @@ h1 {
 @media (max-width: 40rem) {
   .directory-filters { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+.requests-detail, .requests-form { max-inline-size: 42rem; }
+.requests .identity-notice { max-inline-size: 42rem; }
+.requests-form fieldset { display: grid; gap: 1rem; border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+.requests-form legend { padding: 0; margin-block: 0.75rem 1rem; font-weight: 700; }
+.requests-form label { display: grid; gap: 0.35rem; }
+.requests-form input, .requests-form textarea, .requests-form select {
+  box-sizing: border-box; width: 100%; min-inline-size: 0; padding: 0.7rem;
+  background: #fff; color: inherit; border: 1px solid #68857c; border-radius: 0.25rem; font: inherit;
+}
+.requests-form textarea { resize: vertical; }
+.requests-actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.requests button:not(.identity-button) {
+  padding: 0.55rem 0.75rem; background: #fff; color: inherit;
+  border: 1px solid currentColor; border-radius: 0.25rem; font: inherit; cursor: pointer;
+}
+.requests dialog {
+  box-sizing: border-box; max-inline-size: min(35rem, calc(100% - 2rem));
+  padding: clamp(1.25rem, 4vw, 2.5rem); color: #133936;
+  border: 1px solid #68857c; border-radius: 0.25rem; background: #f4f7f4;
+}
+.requests dialog::backdrop { background: rgb(19 57 54 / 58%); }
+.directory .request-start {
+  display: inline-block; padding: 0.65rem 1rem; background: #20584b; color: #fff;
+  border-radius: 0.25rem; text-decoration: none; font-weight: 700;
+}

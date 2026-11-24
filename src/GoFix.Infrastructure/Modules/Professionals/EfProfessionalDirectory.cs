@@ -14,15 +14,7 @@ internal sealed class EfProfessionalDirectory(GoFixDbContext db) : IProfessional
     {
         // Conserva las filas y los catálogos leídos hasta completar la proyección pública.
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
-        var profiles = PublishedProfiles();
-        if (query.EspecialidadId is int specialty)
-            profiles = profiles.Where(profile => db.Set<TecnicoEspecialidad>().Any(link =>
-                link.PerfilTecnicoId == profile.Id && link.EspecialidadId == specialty &&
-                db.Set<Especialidad>().Any(option => option.Id == link.EspecialidadId && option.Activa)));
-        if (query.SectorId is int sector)
-            profiles = profiles.Where(profile => db.Set<TecnicoSector>().Any(link =>
-                link.PerfilTecnicoId == profile.Id && link.SectorId == sector &&
-                db.Set<Sector>().Any(option => option.Id == link.SectorId && option.Activo)));
+        var profiles = PublishedProfiles(query.EspecialidadId, query.SectorId);
 
         var total = await profiles.CountAsync(cancellationToken);
         var page = await profiles.OrderBy(profile => profile.Nombre).ThenBy(profile => profile.Id)
@@ -44,14 +36,9 @@ internal sealed class EfProfessionalDirectory(GoFixDbContext db) : IProfessional
 
     #endregion
 
-    private IQueryable<DirectoryRow> PublishedProfiles() =>
-        from profile in db.PerfilesTecnicos.AsNoTracking()
+    private IQueryable<DirectoryRow> PublishedProfiles(int? specialty = null, int? sector = null) =>
+        from profile in ProfessionalCoverage.Published(db, specialty, sector).AsNoTracking()
         join user in db.Users.AsNoTracking() on profile.UsuarioId equals user.Id
-        where profile.Descripcion.Length >= 50 && profile.Descripcion.Length <= 1000
-            && db.Set<TecnicoEspecialidad>().Any(link => link.PerfilTecnicoId == profile.Id &&
-                db.Set<Especialidad>().Any(option => option.Id == link.EspecialidadId && option.Activa))
-            && db.Set<TecnicoSector>().Any(link => link.PerfilTecnicoId == profile.Id &&
-                db.Set<Sector>().Any(option => option.Id == link.SectorId && option.Activo))
         select new DirectoryRow { Id = profile.Id, Nombre = user.Nombre, Descripcion = profile.Descripcion };
 
     // Las asociaciones se consultan por lote solo para los perfiles de la página solicitada.
