@@ -1,6 +1,8 @@
+import Link from 'next/link';
+
 export function LogoMark({ size = 38 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
       <rect className="logo__bg" width="40" height="40" rx="12" />
       <ellipse cx="20" cy="35.2" rx="6" ry="1.5" fill="#fff" opacity=".35" />
       <path d="M20 33C20 33 10 23.5 10 16.5a10 10 0 0 1 20 0C30 23.5 20 33 20 33z" fill="#fff" />
@@ -10,12 +12,12 @@ export function LogoMark({ size = 38 }: { size?: number }) {
   );
 }
 
-export function Logo({ href = "/" }: { href?: string }) {
+export function Logo({ href = '/' }: { href?: string }) {
   return (
-    <a className="logo" href={href} aria-label="GoFix, ir al inicio">
+    <Link className="logo" href={href} aria-label="GoFix, ir al inicio">
       <LogoMark />
       <span className="logo__go">Go</span>
       <span className="logo__fix">Fix</span>
-    </a>
+    </Link>
   );
 }

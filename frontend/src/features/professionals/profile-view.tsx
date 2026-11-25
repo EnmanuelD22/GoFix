@@ -1,12 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { consultarCuenta, ErrorApi, guardar, solicitar } from '../auth/api';
+import { AppShell } from '../../components/AppShell';
+import { Campo } from '../../components/Campo';
+import { Aviso, Cargando } from '../../components/Estados';
+import { erroresDeCampo, Fallo } from '../../components/Fallo';
+import { Icon } from '../../components/Icon';
+import { plural } from '../../lib/formato';
+import { useConsulta } from '../../lib/use-consulta';
+import { ErrorApi, guardar, solicitar } from '../auth/api';
+import { useCatalogos, type Especialidad } from '../catalogs/catalogos';
 
-type Especialidad = { id: number; nombre: string };
-type Sector = Especialidad & { municipio: string };
 type Perfil = {
   id: string;
   descripcion: string;
@@ -16,28 +21,47 @@ type Perfil = {
   publicado: boolean;
 };
 
+const MIN_DESCRIPCION = 50;
+const MAX_DESCRIPCION = 1000;
+const mensajesPerfil = {
+  409: 'El perfil cambió desde que lo abriste. Conservamos tu edición. Consulta la versión actual antes de volver a guardar.',
+  400: 'Revisa los datos del perfil.',
+};
+
 function alternar(ids: number[], id: number) {
   return ids.includes(id) ? ids.filter(valor => valor !== id) : [...ids, id];
 }
 
-export function PerfilProfesional() {
-  const router = useRouter();
+function Opciones<T extends Especialidad>({ leyenda, opciones, seleccion, cambiar, error, etiqueta }: {
+  leyenda: string; opciones: T[]; seleccion: number[]; cambiar: (ids: number[]) => void;
+  error?: string[]; etiqueta: (item: T) => string;
+}) {
+  const errorId = 'error-' + leyenda.replace(/\s+/g, '-').toLowerCase();
+  return <fieldset className="check-group" aria-describedby={error ? errorId : undefined} aria-invalid={error ? true : undefined}>
+    <legend>{leyenda} <span className="muted">({plural(seleccion.filter(id => opciones.some(item => item.id === id)).length, 'seleccionada', 'seleccionadas')})</span></legend>
+    <div className="check-group__options">
+      {opciones.map(item => <label key={item.id} className="check-chip">
+        <input type="checkbox" checked={seleccion.includes(item.id)} onChange={() => cambiar(alternar(seleccion, item.id))} />
+        <span><Icon name="check" size={16} className="check-chip__mark" />{etiqueta(item)}</span>
+      </label>)}
+    </div>
+    {error && <p id={errorId} className="field__error"><Icon name="alert" size={16} />{error.join(' ')}</p>}
+  </fieldset>;
+}
+
+function EditorPerfil() {
+  const catalogos = useCatalogos();
+  const consulta = useConsulta<Perfil>('/tecnicos/me/perfil');
   const [perfil, setPerfil] = useState<Perfil | null>(null);
-  const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
-  const [sectores, setSectores] = useState<Sector[]>([]);
   const [descripcion, setDescripcion] = useState('');
   const [especialidadIds, setEspecialidadIds] = useState<number[]>([]);
   const [sectorIds, setSectorIds] = useState<number[]>([]);
-  const [cargando, setCargando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
-  const enCurso = useRef(false);
-  const aviso = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<unknown>(null);
-  useEffect(() => { if (error) aviso.current?.focus(); }, [error]);
   const [guardado, setGuardado] = useState(false);
   const [conflicto, setConflicto] = useState(false);
   const [comparacion, setComparacion] = useState<Perfil | null>(null);
-  const [intento, setIntento] = useState(0);
+  const enCurso = useRef(false);
 
   function mostrarPerfil(actual: Perfil) {
     setPerfil(actual);
@@ -47,35 +71,8 @@ export function PerfilProfesional() {
   }
 
   useEffect(() => {
-    const control = new AbortController();
-    async function cargar() {
-      try {
-        const cuenta = await consultarCuenta(control.signal);
-        if (control.signal.aborted) return;
-        if (cuenta.rol !== 'tecnico') {
-          router.replace('/cuenta');
-          return;
-        }
-        const [actual, listaEspecialidades, listaSectores] = await Promise.all([
-          solicitar<Perfil>('/tecnicos/me/perfil', { signal: control.signal }),
-          solicitar<Especialidad[]>('/especialidades', { signal: control.signal }),
-          solicitar<Sector[]>('/sectores', { signal: control.signal }),
-        ]);
-        if (control.signal.aborted) return;
-        mostrarPerfil(actual);
-        setEspecialidades(listaEspecialidades);
-        setSectores(listaSectores);
-      } catch (fallo) {
-        if (control.signal.aborted) return;
-        if (fallo instanceof ErrorApi && fallo.status === 401) router.replace('/acceso?sesion=expirada');
-        else setError(fallo);
-      } finally {
-        if (!control.signal.aborted) setCargando(false);
-      }
-    }
-    void cargar();
-    return () => control.abort();
-  }, [router, intento]);
+    if (consulta.datos && !perfil) mostrarPerfil(consulta.datos);
+  }, [consulta.datos, perfil]);
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,7 +83,7 @@ export function PerfilProfesional() {
     setError(null);
     try {
       const actual = await guardar<Perfil>('/tecnicos/me/perfil', 'PUT', {
-        descripcion, especialidadIds, sectorIds, version: perfil.version,
+        descripcion: descripcion.trim(), especialidadIds, sectorIds, version: perfil.version,
       });
       mostrarPerfil(actual);
       setComparacion(null);
@@ -112,78 +109,79 @@ export function PerfilProfesional() {
     finally { enCurso.current = false; setOcupado(false); }
   }
 
-  const api = error instanceof ErrorApi ? error : null;
-  const errores = api?.problema.errors ?? {};
+  if (consulta.pendiente || catalogos.pendiente) return <Cargando texto="Cargando tu perfil…" filas={4} />;
+  if (consulta.error) return <Fallo error={consulta.error} reintentar={consulta.reintentar} />;
+  if (catalogos.error) return <Fallo error={catalogos.error} reintentar={catalogos.reintentar} />;
+  if (!perfil) return null;
+
+  const especialidades = catalogos.datos?.especialidades ?? [];
+  const sectores = catalogos.datos?.sectores ?? [];
+  const errores = erroresDeCampo(error);
   const faltanCatalogos = especialidades.length === 0 || sectores.length === 0;
   const seleccionesRetiradas = especialidadIds.filter(id => !especialidades.some(item => item.id === id)).length
     + sectorIds.filter(id => !sectores.some(item => item.id === id)).length;
-  const mensaje = api?.status === 409 ? 'El perfil cambió desde que lo abriste. Conservamos tu edición. Consulta la versión actual antes de volver a guardar.'
-    : api?.status === 401 ? 'Tu sesión venció. Inicia sesión de nuevo.'
-    : api?.status === 400 ? 'Revisa los datos del perfil.'
-    : api && [0, 408].includes(api.status) ? api.message
-    : 'No se pudo completar la operación. Vuelve a intentarlo.';
+  const largo = descripcion.trim().length;
+  const requisitos = [
+    { texto: `Descripción de ${MIN_DESCRIPCION} a ${MAX_DESCRIPCION.toLocaleString('es-DO')} caracteres`, ok: largo >= MIN_DESCRIPCION && largo <= MAX_DESCRIPCION },
+    { texto: 'Al menos una especialidad activa', ok: especialidadIds.some(id => especialidades.some(item => item.id === id)) },
+    { texto: 'Al menos un sector activo', ok: sectorIds.some(id => sectores.some(item => item.id === id)) },
+  ];
 
-  return (
-    <main className="identity professional" aria-labelledby="profile-title">
-      <div className="identity-panel">
-        <Link href="/" className="brand identity-brand">GoFix</Link>
-        <h1 id="profile-title">Mi perfil profesional</h1>
-        <p><Link href="/cuenta">Volver a mi cuenta</Link></p>
-        {cargando && <p role="status">Cargando tu perfil…</p>}
-        {Boolean(error) && <div ref={aviso} tabIndex={-1} className="identity-notice" role="alert">
-          <p>{mensaje}</p>
-          {Object.entries(errores).length > 0 && <ul>{Object.entries(errores).map(([campo, mensajes]) => (
-            <li id={`perfil-error-${campo}`} key={campo}>{mensajes.join(' ')}</li>
-          ))}</ul>}
-          {api?.status === 401 && <Link href="/acceso">Iniciar sesión</Link>}
-          {api?.problema.traceId && <small>Referencia {api.problema.traceId}</small>}
-        </div>}
-        {!perfil && !cargando && Boolean(error) && <button type="button" onClick={() => {
-          setError(null); setCargando(true); setIntento(intento + 1);
-        }}>Volver a intentar</button>}
-        {perfil && <>
-          <p className="profile-publication">{perfil.publicado ? 'Perfil publicado' : 'Perfil pendiente de completar'}</p>
-          <p>Para publicar tu perfil, guarda una descripción de 50 a 1.000 caracteres y selecciona al menos una especialidad y un sector activos.</p>
-          {faltanCatalogos && <p className="identity-notice" role="status">Los catálogos necesarios todavía no están disponibles. Vuelve a consultar cuando se hayan habilitado especialidades y sectores.</p>}
-          {seleccionesRetiradas > 0 && <div className="identity-notice">
-            <p>Hay selecciones anteriores que ya no están disponibles. Revisa la cobertura activa antes de guardar.</p>
-            <button type="button" disabled={ocupado} onClick={() => {
-              setEspecialidadIds(especialidadIds.filter(id => especialidades.some(item => item.id === id)));
-              setSectorIds(sectorIds.filter(id => sectores.some(item => item.id === id)));
-            }}>Quitar selecciones retiradas</button>
-          </div>}
-          {conflicto && <button type="button" disabled={ocupado} onClick={consultarVersion}>Consultar versión actual</button>}
-          {comparacion && <section className="profile-comparison" aria-label="Perfil guardado">
-            <h2>Versión guardada</h2>
-            <p>{comparacion.descripcion || 'Sin descripción.'}</p>
-            <p>Especialidades: {especialidades.filter(item => comparacion.especialidadIds.includes(item.id)).map(item => item.nombre).join(', ') || 'Sin selección activa'}.</p>
-            <p>Sectores: {sectores.filter(item => comparacion.sectorIds.includes(item.id)).map(item => item.nombre).join(', ') || 'Sin selección activa'}.</p>
-            <p>Tu formulario conserva la edición anterior. Revísala y guarda para confirmar tus cambios sobre esta versión.</p>
-          </section>}
-          {guardado && <p role="status" className="identity-success">Perfil guardado.</p>}
-          <form method="post" onSubmit={enviar} aria-busy={ocupado}>
-            <fieldset disabled={ocupado}>
-              <label>Descripción de tus servicios
-                <textarea name="descripcion" rows={6} minLength={50} maxLength={1000} required value={descripcion} onChange={event => setDescripcion(event.target.value)}
-                  aria-invalid={Boolean(errores.descripcion) || undefined} aria-describedby={errores.descripcion ? 'perfil-error-descripcion' : undefined} />
-              </label>
-              <fieldset className="profile-options" aria-describedby={errores.especialidadIds ? 'perfil-error-especialidadIds' : undefined}>
-                <legend>Especialidades</legend>
-                {especialidades.map(item => <label key={item.id}>
-                  <input type="checkbox" checked={especialidadIds.includes(item.id)} onChange={() => setEspecialidadIds(alternar(especialidadIds, item.id))} />{item.nombre}
-                </label>)}
-              </fieldset>
-              <fieldset className="profile-options" aria-describedby={errores.sectorIds ? 'perfil-error-sectorIds' : undefined}>
-                <legend>Sectores que atiendes</legend>
-                {sectores.map(item => <label key={item.id}>
-                  <input type="checkbox" checked={sectorIds.includes(item.id)} onChange={() => setSectorIds(alternar(sectorIds, item.id))} />{item.nombre} ({item.municipio})
-                </label>)}
-              </fieldset>
-              <button className="identity-button" disabled={conflicto || faltanCatalogos}>{ocupado ? 'Guardando…' : 'Guardar perfil'}</button>
-            </fieldset>
-          </form>
-        </>}
+  return <div className="profile-editor">
+    <div className="profile-editor__main">
+      {guardado && <div role="status"><Aviso tono="success"><p>Perfil guardado.{perfil.publicado ? ' Ya aparece en el directorio público.' : ''}</p></Aviso></div>}
+      {error ? <Fallo error={error} mensajes={mensajesPerfil} /> : null}
+      {conflicto && <p><button type="button" className="btn btn--ghost" disabled={ocupado} onClick={consultarVersion}><Icon name="refresh" size={18} />Consultar versión actual</button></p>}
+      {faltanCatalogos && <Aviso tono="warning"><p>Los catálogos necesarios todavía no están disponibles. Vuelve a consultar cuando se hayan habilitado especialidades y sectores.</p></Aviso>}
+      {seleccionesRetiradas > 0 && <Aviso tono="warning">
+        <p>Hay selecciones anteriores que ya no están disponibles. Revisa la cobertura activa antes de guardar.</p>
+        <button type="button" className="btn btn--sm btn--light" disabled={ocupado} onClick={() => {
+          setEspecialidadIds(especialidadIds.filter(id => especialidades.some(item => item.id === id)));
+          setSectorIds(sectorIds.filter(id => sectores.some(item => item.id === id)));
+        }}>Quitar selecciones retiradas</button>
+      </Aviso>}
+      {comparacion && <section className="notice notice--info profile-comparison" aria-labelledby="comparacion-title">
+        <div className="notice__body">
+          <h2 id="comparacion-title">Versión guardada</h2>
+          <p className="directory-description">{comparacion.descripcion || 'Sin descripción.'}</p>
+          <p>Especialidades: {especialidades.filter(item => comparacion.especialidadIds.includes(item.id)).map(item => item.nombre).join(', ') || 'Sin selección activa'}.</p>
+          <p>Sectores: {sectores.filter(item => comparacion.sectorIds.includes(item.id)).map(item => item.nombre).join(', ') || 'Sin selección activa'}.</p>
+          <p>Tu formulario conserva la edición anterior. Revísala y guarda para confirmar tus cambios sobre esta versión.</p>
+        </div>
+      </section>}
+      <form method="post" onSubmit={enviar} aria-busy={ocupado} className="card stack-form">
+        <fieldset disabled={ocupado}>
+          <Campo etiqueta="Descripción de tus servicios" nombre="descripcion" error={error}
+            ayuda="Cuenta qué trabajos realizas, tu experiencia y cómo organizas las visitas."
+            contador={{ actual: descripcion.length, maximo: MAX_DESCRIPCION }}>
+            {control => <textarea {...control} rows={7} minLength={MIN_DESCRIPCION} maxLength={MAX_DESCRIPCION} required value={descripcion}
+              onChange={event => setDescripcion(event.target.value)} />}
+          </Campo>
+          <Opciones leyenda="Especialidades" opciones={especialidades} seleccion={especialidadIds} cambiar={setEspecialidadIds}
+            error={errores.especialidadIds} etiqueta={item => item.nombre} />
+          <Opciones leyenda="Sectores que atiendes" opciones={sectores} seleccion={sectorIds} cambiar={setSectorIds}
+            error={errores.sectorIds} etiqueta={item => `${item.nombre} (${item.municipio})`} />
+          <button className="btn" type="submit" disabled={conflicto || faltanCatalogos}>{ocupado ? 'Guardando…' : 'Guardar perfil'}</button>
+        </fieldset>
+      </form>
+    </div>
+    <aside className="profile-editor__aside" aria-labelledby="estado-perfil-title">
+      <div className="card">
+        <h2 id="estado-perfil-title">Estado del perfil</h2>
+        <p className={'tag ' + (perfil.publicado ? 'tag--success' : 'tag--warning')}>{perfil.publicado ? 'Perfil publicado' : 'Pendiente de completar'}</p>
+        <p className="muted section-lead">Tu perfil aparece en el directorio cuando cumple estos requisitos y lo guardas:</p>
+        <ul className="requirements">{requisitos.map(item => <li key={item.texto} className={item.ok ? 'is-ok' : undefined}>
+          <Icon name={item.ok ? 'check' : 'info'} size={18} />{item.texto}<span className="sr-only">{item.ok ? ': cumplido' : ': pendiente'}</span>
+        </li>)}</ul>
+        {perfil.publicado && <Link className="btn btn--ghost btn--block" href={'/tecnicos/' + perfil.id}><Icon name="eye" size={18} />Ver mi perfil público</Link>}
       </div>
-    </main>
-  );
+    </aside>
+  </div>;
+}
+
+export function PerfilProfesional() {
+  return <AppShell rol="tecnico" titulo="Mi perfil profesional"
+    descripcion="Describe tu trabajo y elige dónde lo ofreces para recibir solicitudes de tu zona.">
+    <EditorPerfil />
+  </AppShell>;
 }

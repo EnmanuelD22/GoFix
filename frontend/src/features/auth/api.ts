@@ -1,3 +1,5 @@
+import { rutaAcceso } from '../../lib/navegacion';
+
 export type Cuenta = {
   id: string;
   nombre: string;
@@ -25,7 +27,8 @@ export async function solicitar<T>(ruta: string, opciones?: RequestInit): Promis
     if (!respuesta.ok) {
       if (respuesta.status === 401 && !['/auth/login', '/auth/register'].includes(ruta.split('?')[0])
         && typeof window !== 'undefined' && window.location.pathname !== '/acceso') {
-        window.location.replace('/acceso?sesion=expirada');
+        // Se conserva la ruta actual para volver a ella después de iniciar sesión.
+        window.location.replace(rutaAcceso(window.location.pathname + window.location.search, true));
       }
       const problema: Problema = await respuesta.json().catch((fallo: unknown) => {
         if (signal.aborted) throw fallo;

@@ -1,39 +1,61 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from 'react';
-import type { Cuenta } from '../features/auth/api';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useSesionOpcional } from '../features/auth/session';
+import { inicioPorRol } from '../lib/navegacion';
+import { Icon } from './Icon';
 import { Logo } from './Logo';
 
+const enlaces = [
+  { href: '/tecnicos', texto: 'Técnicos' },
+  { href: '/#como-funciona', texto: 'Cómo funciona' },
+];
+
 export function SiteHeader({ bordered = false }: { bordered?: boolean }) {
-  const [cuenta, setCuenta] = useState<Cuenta | null>(null);
-  const [cargando, setCargando] = useState(true);
+  const { cuenta, cargando } = useSesionOpcional();
+  const pathname = usePathname();
+  const [abierto, setAbierto] = useState(false);
+  const menuId = useId();
+  const boton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => { setAbierto(false); }, [pathname]);
   useEffect(() => {
-    const controller = new AbortController();
-    // Una visita pública sin sesión es válida: no redirigir en una consulta de navegación.
-    fetch('/api/v1/auth/me', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
-      .then(async response => response.ok ? await response.json() as Cuenta : null)
-      .then(setCuenta)
-      .catch(() => { if (!controller.signal.aborted) setCuenta(null); })
-      .finally(() => { if (!controller.signal.aborted) setCargando(false); });
-    return () => controller.abort();
-  }, []);
-  const solicitudes = cuenta?.rol === 'tecnico' ? '/tecnico/solicitudes' : '/cliente/solicitudes';
-  return <header className={`site-header${bordered ? ' site-header--bordered' : ''}`}>
+    if (!abierto) return;
+    function cerrar(evento: KeyboardEvent) {
+      if (evento.key !== 'Escape') return;
+      setAbierto(false);
+      boton.current?.focus();
+    }
+    document.addEventListener('keydown', cerrar);
+    return () => document.removeEventListener('keydown', cerrar);
+  }, [abierto]);
+
+  const acciones = cargando
+    ? <span className="site-header__loading" aria-hidden="true" />
+    : cuenta ? <>
+      <Link className="btn btn--ghost" href="/cuenta"><Icon name="user" size={18} />Mi cuenta</Link>
+      <Link className="btn" href={inicioPorRol(cuenta.rol)}>Mi panel</Link>
+    </> : <>
+      <Link className="btn btn--ghost" href="/acceso">Acceder</Link>
+      <Link className="btn" href="/registro">Crear cuenta</Link>
+    </>;
+
+  return <header className={'site-header' + (bordered ? ' site-header--bordered' : '') + (abierto ? ' is-open' : '')}>
     <Logo />
-    <nav className="main-nav" aria-label="Principal"><ul className="main-nav__list">
-      <li><a href="/tecnicos">Técnicos</a></li>
-      <li><a href="/#como-funciona">Cómo funciona</a></li>
-      {cuenta && <li><a href={solicitudes}>Mis solicitudes</a></li>}
-      {cuenta?.rol === 'tecnico' && <li><a href="/tecnico/panel">Mi panel</a></li>}
-    </ul></nav>
-    <div className="site-header__actions" aria-busy={cargando}>
-      {cargando ? <span className="muted" role="status">Cargando sesión…</span> : cuenta ? <>
-        <a className="btn btn--ghost" href={solicitudes}>Mis solicitudes</a>
-        <a className="btn" href="/cuenta">Mi cuenta</a>
-      </> : <>
-        <a className="btn btn--ghost" href="/acceso">Acceder</a>
-        <a className="btn" href="/registro">Crear cuenta</a>
-      </>}
+    <button ref={boton} type="button" className="site-header__toggle" aria-expanded={abierto} aria-controls={menuId}
+      onClick={() => setAbierto(valor => !valor)}>
+      <Icon name={abierto ? 'close' : 'menu'} size={22} />
+      <span className="sr-only">{abierto ? 'Cerrar menú' : 'Abrir menú'}</span>
+    </button>
+    <div id={menuId} className="site-header__menu">
+      <nav className="main-nav" aria-label="Principal"><ul className="main-nav__list">
+        {enlaces.map(enlace => <li key={enlace.href}>
+          <Link href={enlace.href} aria-current={pathname === enlace.href ? 'page' : undefined}>{enlace.texto}</Link>
+        </li>)}
+      </ul></nav>
+      <div className="site-header__actions" aria-busy={cargando}>{acciones}</div>
     </div>
   </header>;
 }
