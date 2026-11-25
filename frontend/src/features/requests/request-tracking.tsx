@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { Logo } from '../../components/Logo';
+import { Icon } from '../../components/Icon';
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ErrorApi, guardar, type Cuenta } from '../auth/api';
 import { campoInvalido, Fallo, Marco, useConsulta, type Solicitud } from './request-views';
@@ -107,24 +109,41 @@ export function Seguimiento({ item, rol, recargar }: { item: Solicitud; rol: Cue
 export function PanelTecnico() {
   const cuenta = useConsulta<Cuenta>('/auth/me');
   const resumen = useConsulta<Resumen>(cuenta.datos?.rol === 'tecnico' ? '/tecnicos/me/resumen' : null);
-  return <Marco titulo="Mi agenda de servicios">
-    {cuenta.error ? <Fallo error={cuenta.error} reintentar={cuenta.reintentar} /> : null}
-    {cuenta.datos?.rol === 'cliente' && <p><Link href="/cliente/solicitudes">Ver mis solicitudes</Link></p>}
-    {(cuenta.pendiente || resumen.pendiente) && <p role="status">Cargando agenda…</p>}
-    {resumen.error ? <Fallo error={resumen.error} reintentar={resumen.reintentar} /> : null}
-    {resumen.datos && <>
-      <p><Link href="/tecnico/solicitudes">Todas las solicitudes asignadas</Link></p>
-      <ul className="requests-counts">
-        <li><Link href="/tecnico/solicitudes?estado=Pendiente">Pendientes <strong>{resumen.datos.pendientes}</strong></Link></li>
-        <li><Link href="/tecnico/solicitudes?estado=Aceptada">Aceptadas <strong>{resumen.datos.aceptadas}</strong></Link></li>
-        <li><Link href="/tecnico/solicitudes?estado=EnProceso">En proceso <strong>{resumen.datos.enProceso}</strong></Link></li>
-      </ul>
-      <section aria-label="Próximas visitas"><h2>Próximas visitas</h2>
-        {resumen.datos.proximasVisitas.length === 0 && <p>No tienes visitas futuras confirmadas.</p>}
-        <ul className="directory-results">{resumen.datos.proximasVisitas.map(visita =>
-          <li key={visita.id}><h3><Link href={'/solicitudes/' + visita.id}>{visita.titulo}</Link></h3>
-            <p>{fechaVisible(visita.fechaConfirmada)}</p></li>)}</ul>
-      </section>
-    </>}
-  </Marco>;
+  return <div className="app-shell">
+    <aside className="sidebar theme-dark">
+      <Logo />
+      <nav aria-label="Panel del técnico"><ul className="sidebar__list">
+        <li><Link className="sidebar__link" href="/tecnico/panel" aria-current="page"><Icon name="home" size={20} />Mi agenda</Link></li>
+        <li><Link className="sidebar__link" href="/tecnico/solicitudes"><Icon name="list" size={20} />Solicitudes recibidas</Link></li>
+        <li><Link className="sidebar__link" href="/tecnico/perfil"><Icon name="wrench" size={20} />Mi perfil profesional</Link></li>
+        <li><Link className="sidebar__link" href="/cuenta"><Icon name="user" size={20} />Mi cuenta</Link></li>
+        <li><Link className="sidebar__link" href="/tecnicos"><Icon name="search" size={20} />Explorar técnicos</Link></li>
+      </ul></nav>
+    </aside>
+    <main className="app-main">
+      <header className="app-header"><div><h1>Mi agenda de servicios</h1><p className="muted">Tus solicitudes y próximas visitas, en un solo lugar.</p></div>
+        <Link className="btn btn--ghost" href="/cuenta">Gestionar mi cuenta</Link>
+      </header>
+      {cuenta.error ? <Fallo error={cuenta.error} reintentar={cuenta.reintentar} /> : null}
+      {cuenta.datos?.rol === 'cliente' && <p><Link href="/cliente/solicitudes">Ver mis solicitudes</Link></p>}
+      {(cuenta.pendiente || resumen.pendiente) && <p role="status">Cargando agenda…</p>}
+      {resumen.error ? <Fallo error={resumen.error} reintentar={resumen.reintentar} /> : null}
+      {resumen.datos && <>
+        <section aria-label="Resumen de solicitudes"><dl className="stats">
+          <div className="card stat"><span className="icon-tile" data-tone="amber"><Icon name="clock" /></span><dt className="muted">Pendientes</dt><dd><Link href="/tecnico/solicitudes?estado=Pendiente" aria-label={`${resumen.datos.pendientes} solicitudes pendientes`}>{resumen.datos.pendientes}</Link></dd></div>
+          <div className="card stat"><span className="icon-tile" data-tone="mint"><Icon name="cal" /></span><dt className="muted">Aceptadas</dt><dd><Link href="/tecnico/solicitudes?estado=Aceptada" aria-label={`${resumen.datos.aceptadas} solicitudes aceptadas`}>{resumen.datos.aceptadas}</Link></dd></div>
+          <div className="card stat"><span className="icon-tile" data-tone="indigo"><Icon name="play" /></span><dt className="muted">En proceso</dt><dd><Link href="/tecnico/solicitudes?estado=EnProceso" aria-label={`${resumen.datos.enProceso} servicios en proceso`}>{resumen.datos.enProceso}</Link></dd></div>
+        </dl></section>
+        <div className="panel-grid">
+          <section className="card panel" aria-labelledby="visitas-title"><h2 id="visitas-title">Próximas visitas</h2>
+            {resumen.datos.proximasVisitas.length === 0 ? <p className="muted">No tienes visitas futuras confirmadas. Revisa tus solicitudes pendientes para organizar tu agenda.</p> :
+              <div className="table-scroll"><table className="data-table"><caption className="muted">Tus próximas diez visitas confirmadas</caption><thead><tr><th scope="col">Servicio</th><th scope="col">Fecha</th><th scope="col">Estado</th></tr></thead><tbody>
+                {resumen.datos.proximasVisitas.map(visita => <tr key={visita.id}><th scope="row"><Link href={'/solicitudes/' + visita.id}>{visita.titulo}</Link></th><td><time dateTime={visita.fechaConfirmada}>{fechaVisible(visita.fechaConfirmada)}</time></td><td><span className="tag tag--success">Aceptada</span></td></tr>)}
+              </tbody></table></div>}
+          </section>
+          <section className="card panel"><h2>Organiza tu trabajo</h2><p className="muted">Consulta cada solicitud para confirmar la visita, registrar el avance y completar el servicio.</p><Link className="btn btn--block" href="/tecnico/solicitudes">Todas las solicitudes asignadas</Link><p className="muted">Mantén tus especialidades y sectores al día para recibir solicitudes acordes con tu cobertura.</p><Link href="/tecnico/perfil">Editar mi perfil profesional</Link></section>
+        </div>
+      </>}
+    </main>
+  </div>;
 }

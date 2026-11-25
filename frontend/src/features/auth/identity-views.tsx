@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Logo } from '../../components/Logo';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { consultarCuenta, ErrorApi, guardar, type Cuenta } from './api';
@@ -8,8 +9,9 @@ import { consultarCuenta, ErrorApi, guardar, type Cuenta } from './api';
 function Panel({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <main className="identity" aria-labelledby="identity-title">
+      <aside className="identity-story theme-dark"><Logo /><h2>Tu hogar, en buenas manos.</h2><p>Encuentra técnicos de tu zona y sigue cada servicio desde tu cuenta.</p><Link href="/tecnicos">Explorar técnicos</Link></aside>
       <div className="identity-panel">
-        <Link href="/" className="brand identity-brand">GoFix</Link>
+        <Logo />
         <h1 id="identity-title">{titulo}</h1>
         {children}
       </div>
