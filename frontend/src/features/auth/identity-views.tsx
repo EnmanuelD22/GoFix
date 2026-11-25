@@ -75,8 +75,8 @@ export function Acceso({ registro, cuentaCreada = false, sesionExpirada = false 
     setError(null);
     const datos = Object.fromEntries(new FormData(event.currentTarget));
     try {
-      await guardar(registro ? '/auth/register' : '/auth/login', 'POST', datos);
-      router.replace(registro ? '/acceso?registro=ok' : '/cuenta');
+      const cuenta = await guardar<Cuenta>(registro ? '/auth/register' : '/auth/login', 'POST', datos);
+      router.replace(registro ? '/acceso?registro=ok' : cuenta.rol === 'tecnico' ? '/tecnico/panel' : '/cliente/solicitudes');
     } catch (fallo) {
       setError(fallo);
       enCurso.current = false;

@@ -156,3 +156,9 @@ body{overflow-wrap:anywhere}main,section,article,fieldset,form{min-width:0}butto
 
 .panel-request-summary .tag,.detail__head .tag{flex-shrink:0;white-space:nowrap}
 
+
+/* Navegación y acciones de solicitudes con contraste explícito. */
+.requests .requests-navigation{background:var(--night);margin-inline:calc(-1 * max(20px,(100vw - 1200px)/2));padding-inline:max(20px,(100vw - 1200px)/2)}
+.requests .site-header a{color:white}.requests .site-header .logo__fix{color:var(--accent-on-night)}
+.requests a.btn{color:white;text-decoration:none}.requests a.btn--ghost{color:var(--ink);background:transparent}.requests .theme-dark a.btn--ghost{color:white}.requests .theme-dark a.btn{color:white}
+.requests> .directory-content>p .btn{margin-block:8px 16px}.requests .directory-filters .btn{align-self:end;justify-self:start}
