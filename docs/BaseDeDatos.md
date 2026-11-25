@@ -10,7 +10,7 @@ GoFix usa SQL Server con un `GoFixDbContext` y una única secuencia de migracion
 
 Las claves foráneas entre módulos restringen el borrado físico. Las solicitudes apuntan al perfil técnico y a entradas de catálogo independientes. Así, un cambio en las asociaciones de cobertura permite conservar las solicitudes anteriores. Las citas usan `datetimeoffset` y conservan el desplazamiento recibido. Los instantes de auditoría se escriben en UTC en columnas `datetime2`.
 
-SQL Server genera `rowversion` en perfiles y solicitudes. Al implementar la edición del perfil, el caso de uso deberá actualizar la fila del perfil en la misma transacción que sus asociaciones para detectar ediciones concurrentes de cobertura. La clave de idempotencia es única por cliente, almacena el hash SHA-256 en 32 bytes y referencia una sola solicitud. Cada solicitud admite una sola valoración y su puntuación debe estar entre 1 y 5. Autorización, cobertura activa, transiciones y elegibilidad corresponden a los futuros casos de uso. El borrado lógico conserva historial y claves y deberá filtrarse en las consultas operativas de solicitudes.
+SQL Server genera `rowversion` en perfiles y solicitudes. La edición del perfil actualiza su fila y sus asociaciones en una transacción para detectar ediciones concurrentes de cobertura. La clave de idempotencia es única por cliente, almacena el hash SHA-256 en 32 bytes y referencia una sola solicitud. Cada solicitud admite una sola valoración y su puntuación debe estar entre 1 y 5. Los casos de uso aplican autorización, cobertura activa, transiciones y elegibilidad. El borrado lógico conserva historial y claves, y las consultas operativas excluyen las solicitudes eliminadas.
 
 ## Aplicar y revisar migraciones
 
