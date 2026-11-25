@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { ErrorApi, guardar, type Cuenta } from '../auth/api';
-import { Fallo, Marco, useConsulta, type Solicitud } from './request-views';
+import { campoInvalido, Fallo, Marco, useConsulta, type Solicitud } from './request-views';
 
 type Accion = 'aceptar' | 'rechazar' | 'cancelar' | 'iniciar' | 'completar';
 const etiquetas: Record<Accion, string> = { aceptar: 'Aceptar solicitud', rechazar: 'Rechazar solicitud',
@@ -19,6 +19,7 @@ function fechaVisible(fecha: string) {
 }
 
 export function Seguimiento({ item, rol, recargar }: { item: Solicitud; rol: Cuenta['rol']; recargar: () => void }) {
+  const avisoId = useId();
   const [accion, setAccion] = useState<Accion | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -56,7 +57,7 @@ export function Seguimiento({ item, rol, recargar }: { item: Solicitud; rol: Cue
       recargar();
     } catch (fallo) {
       setError(fallo);
-      if (fallo instanceof ErrorApi && [404, 409].includes(fallo.status)) setConflicto(true);
+      if (fallo instanceof ErrorApi && [0, 408, 404, 409].includes(fallo.status)) setConflicto(true);
     } finally {
       enCurso.current = false;
       setOcupado(false);
@@ -76,16 +77,16 @@ export function Seguimiento({ item, rol, recargar }: { item: Solicitud; rol: Cue
     </section>
     <dialog ref={dialogo} aria-labelledby="accion-seguimiento" onCancel={event => { if (ocupado) event.preventDefault(); }}>
       <h2 id="accion-seguimiento">{accion ? etiquetas[accion] : 'Confirmar acción'}</h2>
-      {error ? <Fallo error={error} /> : null}
+      {error ? <Fallo error={error} id={avisoId} /> : null}
       {conflicto && <p><button type="button" onClick={() => { dialogo.current?.close(); recargar(); }}>Cargar la versión actual</button></p>}
-      <form className="requests-form" key={accion} onSubmit={confirmar}>
+      <form className="requests-form" key={accion} onSubmit={confirmar} aria-busy={ocupado} aria-describedby={error ? avisoId : undefined}>
         <fieldset disabled={ocupado || conflicto}>
-          {accion === 'aceptar' && <label>Fecha y hora confirmadas<input name="fechaConfirmada" type="datetime-local" required /></label>}
-          {(accion === 'rechazar' || accion === 'cancelar') && <label>Motivo<textarea name="motivo" minLength={10} maxLength={500} rows={4} required /></label>}
-          {accion === 'completar' && <label>Observación final (opcional)<textarea name="observacion" maxLength={1000} rows={4} /></label>}
+          {accion === 'aceptar' && <label>Fecha y hora confirmadas<input name="fechaConfirmada" {...campoInvalido(error, "fechaConfirmada", avisoId)} type="datetime-local" required /></label>}
+          {(accion === 'rechazar' || accion === 'cancelar') && <label>Motivo<textarea name="motivo" {...campoInvalido(error, "motivo", avisoId)} minLength={10} maxLength={500} rows={4} required /></label>}
+          {accion === 'completar' && <label>Observación final (opcional)<textarea name="observacion" {...campoInvalido(error, "observacion", avisoId)} maxLength={1000} rows={4} /></label>}
           {accion === 'iniciar' && <p>Se registrará la fecha y hora de inicio del servicio.</p>}
           <div className="requests-actions">
-            <button type="button" onClick={() => dialogo.current?.close()}>Volver al detalle</button>
+            <button type="button" autoFocus onClick={() => dialogo.current?.close()}>Volver al detalle</button>
             <button type="submit" className="identity-button">{ocupado ? 'Guardando…' : 'Confirmar'}</button>
           </div>
         </fieldset>

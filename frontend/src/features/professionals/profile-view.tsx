@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { consultarCuenta, ErrorApi, guardar, solicitar } from '../auth/api';
 
 type Especialidad = { id: number; nombre: string };
@@ -30,7 +30,10 @@ export function PerfilProfesional() {
   const [sectorIds, setSectorIds] = useState<number[]>([]);
   const [cargando, setCargando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
+  const enCurso = useRef(false);
+  const aviso = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<unknown>(null);
+  useEffect(() => { if (error) aviso.current?.focus(); }, [error]);
   const [guardado, setGuardado] = useState(false);
   const [conflicto, setConflicto] = useState(false);
   const [comparacion, setComparacion] = useState<Perfil | null>(null);
@@ -64,7 +67,7 @@ export function PerfilProfesional() {
         setSectores(listaSectores);
       } catch (fallo) {
         if (control.signal.aborted) return;
-        if (fallo instanceof ErrorApi && fallo.status === 401) router.replace('/acceso');
+        if (fallo instanceof ErrorApi && fallo.status === 401) router.replace('/acceso?sesion=expirada');
         else setError(fallo);
       } finally {
         if (!control.signal.aborted) setCargando(false);
@@ -76,7 +79,8 @@ export function PerfilProfesional() {
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (ocupado || !perfil || conflicto) return;
+    if (enCurso.current || !perfil || conflicto) return;
+    enCurso.current = true;
     setOcupado(true);
     setGuardado(false);
     setError(null);
@@ -90,10 +94,12 @@ export function PerfilProfesional() {
     } catch (fallo) {
       setError(fallo);
       if (fallo instanceof ErrorApi && fallo.status === 409) setConflicto(true);
-    } finally { setOcupado(false); }
+    } finally { enCurso.current = false; setOcupado(false); }
   }
 
   async function consultarVersion() {
+    if (enCurso.current) return;
+    enCurso.current = true;
     setOcupado(true);
     setError(null);
     try {
@@ -103,7 +109,7 @@ export function PerfilProfesional() {
       setComparacion(actual);
       setConflicto(false);
     } catch (fallo) { setError(fallo); }
-    finally { setOcupado(false); }
+    finally { enCurso.current = false; setOcupado(false); }
   }
 
   const api = error instanceof ErrorApi ? error : null;
@@ -114,6 +120,7 @@ export function PerfilProfesional() {
   const mensaje = api?.status === 409 ? 'El perfil cambió desde que lo abriste. Conservamos tu edición. Consulta la versión actual antes de volver a guardar.'
     : api?.status === 401 ? 'Tu sesión venció. Inicia sesión de nuevo.'
     : api?.status === 400 ? 'Revisa los datos del perfil.'
+    : api && [0, 408].includes(api.status) ? api.message
     : 'No se pudo completar la operación. Vuelve a intentarlo.';
 
   return (
@@ -123,7 +130,7 @@ export function PerfilProfesional() {
         <h1 id="profile-title">Mi perfil profesional</h1>
         <p><Link href="/cuenta">Volver a mi cuenta</Link></p>
         {cargando && <p role="status">Cargando tu perfil…</p>}
-        {Boolean(error) && <div className="identity-notice" role="alert">
+        {Boolean(error) && <div ref={aviso} tabIndex={-1} className="identity-notice" role="alert">
           <p>{mensaje}</p>
           {Object.entries(errores).length > 0 && <ul>{Object.entries(errores).map(([campo, mensajes]) => (
             <li id={`perfil-error-${campo}`} key={campo}>{mensajes.join(' ')}</li>

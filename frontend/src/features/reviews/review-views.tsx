@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { ErrorApi, guardar } from '../auth/api';
-import { Fallo, useConsulta } from '../requests/request-views';
+import { campoInvalido, Fallo, useConsulta } from '../requests/request-views';
 
 type Valoracion = { id: string; puntuacion: number; comentario: string | null; createdAtUtc: string };
 type Opinion = Valoracion & { nombreCliente: string };
@@ -13,6 +13,7 @@ function Fecha({ valor }: { valor: string }) {
 }
 
 export function ValorarServicio({ id }: { id: string }) {
+  const avisoId = useId();
   const ruta = '/solicitudes/' + encodeURIComponent(id) + '/valoracion';
   const consulta = useConsulta<Valoracion | undefined>(ruta);
   const [creada, setCreada] = useState<Valoracion>();
@@ -53,20 +54,20 @@ export function ValorarServicio({ id }: { id: string }) {
     {consulta.pendiente && <p role="status">Consultando valoración…</p>}
     {consulta.error ? <Fallo error={consulta.error} reintentar={consulta.reintentar} /> : null}
     {error && !valoracion ? error instanceof ErrorApi && error.status === 409
-      ? <p role="alert">La valoración ya existe o el servicio cambió. Consulta de nuevo el detalle.</p>
-      : <Fallo error={error} /> : null}
+      ? <p id={avisoId} role="alert">La valoración ya existe o el servicio cambió. Consulta de nuevo el detalle.</p>
+      : <Fallo error={error} id={avisoId} /> : null}
     {valoracion ? <div>
       <p role="status">Valoración publicada. Esta opinión queda guardada de forma definitiva.</p>
       <p>{valoracion.puntuacion} de 5 estrellas · <Fecha valor={valoracion.createdAtUtc} /></p>
       {valoracion.comentario && <p className="directory-description">{valoracion.comentario}</p>}
-    </div> : !consulta.pendiente && !consulta.error && <form className="requests-form" onSubmit={preparar}>
+    </div> : <form hidden={consulta.pendiente || Boolean(consulta.error)} className="requests-form" onSubmit={preparar} aria-busy={ocupado} aria-describedby={error ? avisoId : undefined}>
       <fieldset disabled={ocupado}>
         <legend>¿Cómo fue el servicio?</legend>
-        <label>Puntuación<select name="puntuacion" required defaultValue="">
+        <label>Puntuación<select name="puntuacion" {...campoInvalido(error, "puntuacion", avisoId)} required defaultValue="">
           <option value="">Elige una puntuación</option>
           {[1, 2, 3, 4, 5].map(valor => <option key={valor} value={valor}>{'★'.repeat(valor)} — {valor} de 5</option>)}
         </select></label>
-        <label>Comentario opcional<textarea name="comentario" rows={4} maxLength={1000} /></label>
+        <label>Comentario opcional<textarea name="comentario" {...campoInvalido(error, "comentario", avisoId)} rows={4} maxLength={1000} /></label>
         <p>Tu nombre de pila, puntuación y comentario serán públicos.</p>
         <button className="identity-button" type="submit">Publicar valoración</button>
       </fieldset>
