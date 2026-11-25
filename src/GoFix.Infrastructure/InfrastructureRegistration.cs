@@ -24,7 +24,7 @@ public static class InfrastructureRegistration
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<GoFixDbContext>(options => options.UseSqlServer(
+        services.AddDbContext<GoFixDbContext>(options => options.EnableSensitiveDataLogging(false).UseSqlServer(
             configuration.GetConnectionString("GoFix"),
             sql => sql.MigrationsHistoryTable("__EFMigrationsHistory")));
 

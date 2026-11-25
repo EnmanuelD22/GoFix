@@ -19,6 +19,11 @@ internal static class HttpConfiguration
                     Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
                 // Los fallos del transporte tienen un código estable, independiente de los casos de uso.
                 details.Extensions.TryAdd("code", $"http_{details.Status}");
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("GoFix.Api.Errors");
+                logger.LogWarning(new EventId(1001, "ApiProblem"),
+                    "API error {StatusCode} {Code} {TraceId}", details.Status,
+                    details.Extensions["code"], details.Extensions["traceId"]);
             };
         });
         services.AddAntiforgery(options =>
@@ -40,6 +45,14 @@ internal static class HttpConfiguration
             var status = exception is BadHttpRequestException badRequest
                 ? badRequest.StatusCode
                 : StatusCodes.Status500InternalServerError;
+            if (exception is not null)
+            {
+                var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("GoFix.Api.Errors");
+                logger.LogError(new EventId(1002, "ApiException"),
+                    "API exception {ExceptionType} {TraceId}", exception.GetType().FullName,
+                    Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier);
+            }
             return Results.Problem(statusCode: status).ExecuteAsync(context);
         }));
 
