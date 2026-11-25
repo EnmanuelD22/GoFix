@@ -43,3 +43,23 @@ foreach ($name in ($allowedReferences.Keys | Sort-Object)) {
 
     Write-Host "Dependencias aprobadas: $name"
 }
+
+# Los casos de uso y endpoints no deben acoplarse a la persistencia concreta.
+$forbiddenImports = @{
+    'GoFix.Application' = 'GoFix\.(Infrastructure|Api)(\.|;)'
+    'GoFix.Domain' = 'GoFix\.(Application|Infrastructure|Api)(\.|;)'
+}
+foreach ($project in $forbiddenImports.Keys) {
+    $moduleRoot = Join-Path $sourceRoot "$project/Modules"
+    foreach ($file in (Get-ChildItem -LiteralPath $moduleRoot -Recurse -Filter '*.cs' -File)) {
+        if (Select-String -LiteralPath $file.FullName -Pattern $forbiddenImports[$project] -Quiet) {
+            throw "$project tiene una dependencia prohibida en $($file.FullName)."
+        }
+    }
+}
+foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $sourceRoot 'GoFix.Api/Modules') -Recurse -Filter '*.cs' -File)) {
+    if (Select-String -LiteralPath $file.FullName -Pattern 'GoFix\.Infrastructure(\.|;)|\bGoFixDbContext\b|\bDbSet\s*<' -Quiet) {
+        throw "Un endpoint usa persistencia concreta: $($file.FullName)."
+    }
+}
+Write-Host 'Limites de modulos aprobados: casos de uso y endpoints sin persistencia concreta.'
