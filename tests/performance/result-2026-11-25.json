@@ -1,0 +1,41 @@
+{
+  "timestampUtc": "2026-11-25T19:40:19.454634+00:00",
+  "scenario": {
+    "durationSeconds": 600.11,
+    "concurrentUsers": 20,
+    "publishedTechnicians": 1000,
+    "requests": 143904,
+    "operations": [
+      "/api/v1/tecnicos?page=1&pageSize=20",
+      "/api/v1/tecnicos?page=20&pageSize=20",
+      "/api/v1/tecnicos?page=50&pageSize=20",
+      "/api/v1/especialidades",
+      "/api/v1/sectores"
+    ]
+  },
+  "host": {
+    "system": "Windows-11-10.0.26300-SP0",
+    "processor": "Intel64 Family 6 Model 158 Stepping 13, GenuineIntel",
+    "logicalCpus": 8,
+    "ramGb": 7.79,
+    "diskGb": 237.39,
+    "sqlServer": "SQL Server 2025 Developer 17.0.1155.3"
+  },
+  "read": {
+    "count": 115123,
+    "p50Ms": 53.29,
+    "p95Ms": 253.8,
+    "p99Ms": 358.18,
+    "errors": 0,
+    "errorRate": 0.0
+  },
+  "write": {
+    "count": 28781,
+    "p50Ms": 51.41,
+    "p95Ms": 104.96,
+    "p99Ms": 142.29,
+    "errors": 0,
+    "errorRate": 0.0
+  },
+  "passed": true
+}\n
