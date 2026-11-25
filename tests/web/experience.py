@@ -139,7 +139,7 @@ def main():
             assert public_page.evaluate("document.activeElement !== document.body")
             # La cabecera y el logo contienen enlaces: Enter sobre el primer
             # foco navegaría fuera del registro. Verificamos el orden del formulario.
-            public_page.locator("[name=rol]").focus()
+            public_page.locator("[name=rol]:checked").focus()
             for field, value in {
                 "nombre": "Registro por teclado", "telefono": "+18095550123",
                 "correo": uuid4().hex + "@web.test", "contrasena": password
@@ -147,6 +147,8 @@ def main():
                 public_page.keyboard.press("Tab")
                 expect(public_page.locator("[name=" + field + "]")).to_be_focused()
                 public_page.keyboard.insert_text(value)
+            public_page.keyboard.press("Tab")
+            expect(public_page.get_by_role("button", name="Mostrar contraseña", exact=True)).to_be_focused()
             public_page.keyboard.press("Tab")
             expect(public_page.get_by_role("button", name="Crear cuenta", exact=True)).to_be_focused()
             public_page.keyboard.press("Enter")
@@ -284,7 +286,7 @@ def main():
             panel_page = technician.new_page()
             navigate(panel_page, "/tecnico/panel")
             expect(panel_page.get_by_role("heading", name="Mi agenda de servicios")).to_be_visible()
-            expect(panel_page.get_by_role("link", name="1 solicitudes pendientes", exact=True)).to_be_visible()
+            expect(panel_page.get_by_role("link", name="1 solicitud pendiente", exact=True)).to_be_visible()
             expect(panel_page.get_by_role("link", name="0 solicitudes aceptadas", exact=True)).to_be_visible()
             expect(panel_page.get_by_role("link", name=item["titulo"], exact=True)).to_be_visible()
             panel_page.get_by_role("button", name="Aceptar solicitud", exact=True).click()
@@ -295,7 +297,7 @@ def main():
             action_dialog.get_by_role("button", name="Confirmar", exact=True).click()
             expect(action_dialog).not_to_be_visible()
             expect(panel_page.get_by_role("link", name="0 solicitudes pendientes", exact=True)).to_be_visible()
-            expect(panel_page.get_by_role("link", name="1 solicitudes aceptadas", exact=True)).to_be_visible()
+            expect(panel_page.get_by_role("link", name="1 solicitud aceptada", exact=True)).to_be_visible()
             expect(panel_page.get_by_role("region", name="Historial de la solicitud")).to_contain_text("Aceptada")
             visit_link = panel_page.locator(".data-table").get_by_role("button", name=item["titulo"], exact=True)
             expect(visit_link).to_be_visible()
@@ -315,7 +317,7 @@ def main():
             panel_page.close()
             customer.clear_cookies()
             navigate(page, "/cliente/solicitudes")
-            expect(page).to_have_url(root + "/acceso?sesion=expirada")
+            expect(page).to_have_url(root + "/acceso?sesion=expirada&volver=%2Fcliente%2Fsolicitudes")
             expect(page.locator("[name=contrasena]")).to_have_value("")
             audit(page, "sesión vencida")
             print("PASS", args.browser, "accesibilidad, teclado, adaptación y flujo de solicitud",

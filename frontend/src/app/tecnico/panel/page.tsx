@@ -1,2 +1,8 @@
+import type { Metadata } from 'next';
 import { PanelTecnico } from '../../../features/requests/request-tracking';
-export default function Panel() { return <PanelTecnico />; }
+
+export const metadata: Metadata = { title: 'Mi agenda' };
+
+export default function Panel() {
+  return <PanelTecnico />;
+}
