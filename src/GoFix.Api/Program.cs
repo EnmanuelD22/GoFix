@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddGoFixSafeDiagnostics();
 
 builder.Services.AddGoFixInfrastructure(builder.Configuration);
 builder.Services.AddGoFixHttp();

@@ -47,7 +47,7 @@ Marca cada casilla cuando el alcance indicado esté implementado y verificado. L
 - [x] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
 - [x] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
 - [x] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
-- [ ] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
+- [x] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
 - [ ] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
 - [ ] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
 
@@ -140,6 +140,16 @@ El cliente puede publicar una valoración desde el detalle de su servicio comple
 El perfil público del técnico muestra opiniones paginadas con nombre de pila del cliente, puntuación, comentario y fecha. El promedio se calcula desde las valoraciones persistidas y se presenta con una cifra decimal.
 
 La API expone `POST /api/v1/solicitudes/{id}/valoracion`, `GET` sobre esa misma ruta para consultar la opinión propia y `GET /api/v1/tecnicos/{id}/valoraciones?page=1&pageSize=20` para las opiniones públicas. La consulta privada devuelve 204 cuando aún no existe una valoración.
+
+## Seguridad y contratos
+
+Las sesiones usan HTTPS, cookies HttpOnly y Secure y una duración absoluta de 60 minutos. Cerrar sesión revoca la fila persistida y rechaza cualquier copia de esa cookie. Las mutaciones requieren el token antifalsificación de la sesión actual.
+
+La API verifica rol y pertenencia de los recursos. Registro e inicio de sesión comparten diez intentos por minuto e IP. Las respuestas 429 incluyen Retry-After. Cinco accesos fallidos consecutivos bloquean la cuenta durante 15 minutos. Detrás de un proxy, configura únicamente las direcciones de confianza descritas en Desarrollo local.
+
+Los errores de API devuelven Problem Details con code y traceId. El registro estructurado GoFix.Api.Errors conserva estado, código, tipo de excepción y correlación. Se filtran las categorías del framework que pueden registrar URL, valores de entrada o mensajes SQL. El registro sensible de EF permanece desactivado.
+
+Las pruebas verifican expiración, revocación, bloqueo y recuperación, permisos con dos clientes, dos técnicos y visitante, antifalsificación y correlación de errores sin los datos sensibles utilizados en las pruebas.
 
 ## Verificación y publicación
 
