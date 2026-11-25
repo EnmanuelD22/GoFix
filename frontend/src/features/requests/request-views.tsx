@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SiteHeader } from '../../components/SiteHeader';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ErrorApi, guardar, solicitar, type Cuenta } from '../auth/api';
@@ -67,11 +68,7 @@ export function campoInvalido(error: unknown, campo: string, avisoId: string) {
 export function Marco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return <main className="directory requests">
     <div className="directory-content">
-      <nav className="directory-nav" aria-label="Navegación principal">
-        <Link href="/" className="brand identity-brand">GoFix</Link>
-        <Link href="/cuenta">Mi cuenta</Link>
-
-      </nav>
+      <SiteHeader />
       <h1>{titulo}</h1>
       {children}
     </div>
