@@ -48,7 +48,7 @@ Marca cada casilla cuando el alcance indicado esté implementado y verificado. L
 - [x] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
 - [x] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
 - [x] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
-- [ ] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
+- [x] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
 - [ ] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
 
 Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y pruebas aplicables. Las pruebas con SQL Server real verifican restricciones, transacciones y concurrencia.
@@ -150,6 +150,16 @@ La API verifica rol y pertenencia de los recursos. Registro e inicio de sesión 
 Los errores de API devuelven Problem Details con code y traceId. El registro estructurado GoFix.Api.Errors conserva estado, código, tipo de excepción y correlación. Se filtran las categorías del framework que pueden registrar URL, valores de entrada o mensajes SQL. El registro sensible de EF permanece desactivado.
 
 Las pruebas verifican expiración, revocación, bloqueo y recuperación, permisos con dos clientes, dos técnicos y visitante, antifalsificación y correlación de errores sin los datos sensibles utilizados en las pruebas.
+
+## Experiencia web
+
+Los formularios conservan los datos ante fallos recuperables y bloquean envíos duplicados mientras se guarda. Cada petición tiene un límite de 30 segundos. Si la sesión vence, la interfaz lleva al acceso y muestra un aviso. Las credenciales no se guardan en el almacenamiento del navegador.
+
+La creación de solicitudes conserva su clave de idempotencia para recuperar una respuesta perdida. Las transiciones con resultado incierto requieren consultar de nuevo el detalle antes de confirmar otra acción. Los conflictos de versión ofrecen recargar los datos actuales.
+
+Los errores reciben foco y se asocian a los campos correspondientes. Los diálogos permiten navegación por teclado y la interfaz respeta la preferencia de movimiento reducido. Los flujos principales se comprueban a 360, 768 y 1440 px.
+
+Las pruebas de navegador están en `tests/web`. Requieren Python con Playwright, Edge, SQL Server local, el SDK .NET y los certificados HTTPS de desarrollo ya configurados. Instala Playwright en un entorno Python y ejecuta `tests/web/Test-Web.ps1 -Python <ruta-al-python>`. El script crea y elimina una base temporal, inicia los servidores y termina sus procesos al finalizar. Puedes añadir `-ChromePath <chrome.exe>` y `-AxePath <axe.min.js>` para comprobar Chrome y ejecutar la revisión automática de accesibilidad.
 
 ## Verificación y publicación
 

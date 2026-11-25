@@ -56,6 +56,14 @@ export function useConsulta<T>(ruta: string | null) {
   };
 }
 
+export function campoInvalido(error: unknown, campo: string, avisoId: string) {
+  const errores = error instanceof ErrorApi ? error.problema.errors : undefined;
+  return {
+    'aria-invalid': errores?.[campo]?.length ? true as const : undefined,
+    'aria-describedby': error ? avisoId : undefined,
+  };
+}
+
 export function Marco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return <main className="directory requests">
     <div className="directory-content">
@@ -70,15 +78,19 @@ export function Marco({ titulo, children }: { titulo: string; children: ReactNod
   </main>;
 }
 
-export function Fallo({ error, reintentar }: { error: unknown; reintentar?: () => void }) {
+export function Fallo({ error, reintentar, id }: { error: unknown; reintentar?: () => void; id?: string }) {
+  const aviso = useRef<HTMLDivElement>(null);
+  useEffect(() => { aviso.current?.focus(); }, [error]);
   const api = error instanceof ErrorApi ? error : undefined;
-  return <div className="identity-notice" role="alert">
+  return <div ref={aviso} id={id} className="identity-notice" role="alert" tabIndex={-1}>
     {api?.status === 401 ? <p><Link href="/acceso">Inicia sesión</Link> para gestionar las solicitudes.</p>
       : <p>{api?.status === 404 ? 'La información solicitada ya no está disponible.'
         : api?.status === 403 ? 'Tu cuenta no tiene acceso a esta operación.'
         : api?.status === 409 ? 'No se pudo aplicar el cambio. Comprueba los datos actuales antes de volver a intentarlo.'
         : api?.problema.code === 'cobertura_invalida' ? 'El técnico ya no atiende la especialidad o el sector seleccionados.'
         : api?.status === 400 ? 'Revisa los datos de la solicitud.'
+        : api?.status === 408 ? 'La operación tardó demasiado. Consulta los datos actuales antes de volver a enviarla.'
+        : api?.status === 429 ? 'Has realizado demasiados intentos. Espera un minuto y vuelve a intentarlo.'
         : 'No se pudo completar la operación. Vuelve a intentarlo.'}</p>}
     {api?.problema.errors && <ul>{Object.entries(api.problema.errors).map(([campo, mensajes]) =>
       <li key={campo}>{mensajes.join(' ')}</li>)}</ul>}
