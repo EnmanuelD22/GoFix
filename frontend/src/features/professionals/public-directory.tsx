@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ErrorApi, solicitar } from '../auth/api';
 import { OpinionesPublicas } from '../reviews/review-views';
+import { SiteHeader } from '../../components/SiteHeader';
+import { SiteFooter } from '../../components/SiteFooter';
 
 type Especialidad = { id: number; nombre: string };
 type Sector = Especialidad & { municipio: string };
@@ -20,16 +22,17 @@ type Tecnico = {
 type Resultados = { items: Tecnico[]; page: number; pageSize: number; total: number };
 
 function Marco({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return <main className="directory" aria-labelledby="directory-title">
-    <div className="directory-content">
-      <nav className="directory-nav" aria-label="Navegación principal">
-        <Link className="brand identity-brand" href="/">GoFix</Link>
-        <Link href="/cuenta">Mi cuenta</Link>
-      </nav>
-      <h1 id="directory-title">{titulo}</h1>
+  return <>
+    <div className="container"><SiteHeader bordered /></div>
+    <main className="container model-directory" aria-labelledby="directory-title">
+      <div className="page-head">
+        <nav aria-label="Ruta" className="breadcrumb muted"><Link href="/">Inicio</Link> / <Link href="/tecnicos">Técnicos</Link></nav>
+        <h1 id="directory-title">{titulo}</h1>
+      </div>
       {children}
-    </div>
-  </main>;
+    </main>
+    <SiteFooter />
+  </>;
 }
 
 function Fallo({ error, reintentar }: { error: unknown; reintentar: () => void }) {
@@ -47,7 +50,7 @@ function Fallo({ error, reintentar }: { error: unknown; reintentar: () => void }
 }
 
 function Reputacion({ tecnico }: { tecnico: Tecnico }) {
-  return <p className="directory-reputation">{tecnico.cantidadValoraciones === 0 || tecnico.promedio === null
+  return <p className="rating tech-card__rating">{tecnico.cantidadValoraciones === 0 || tecnico.promedio === null
     ? 'Sin valoraciones'
     : `${tecnico.promedio.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5 · ${tecnico.cantidadValoraciones} ${tecnico.cantidadValoraciones === 1 ? 'valoración' : 'valoraciones'}`}</p>;
 }
@@ -68,6 +71,9 @@ export function Directorio({ consulta }: { consulta: string }) {
     setCargando(true);
     setError(null);
     setResultados(null);
+    const actuales = new URLSearchParams(consulta);
+    setEspecialidad(actuales.get('especialidadId') ?? '');
+    setSector(actuales.get('sectorId') ?? '');
     Promise.all([
       solicitar<Resultados>(`/tecnicos${consulta ? `?${consulta}` : ''}`, { signal: control.signal }),
       solicitar<Especialidad[]>('/especialidades', { signal: control.signal }),
@@ -100,21 +106,24 @@ export function Directorio({ consulta }: { consulta: string }) {
   }
 
   return <Marco titulo="Encuentra un técnico">
-    <form key={consulta} method="get" onSubmit={buscar} className="directory-filters" aria-label="Filtros de técnicos">
-      <label>Especialidad<select name="especialidadId" value={especialidad} onChange={event => setEspecialidad(event.target.value)} disabled={!catalogos}>
+    <p className="page-head__lead muted">Busca por especialidad y sector. Tus filtros quedan guardados en la dirección de la página.</p>
+    <div className="directory-layout">
+    <aside aria-label="Filtros"><form key={consulta} method="get" onSubmit={buscar} className="card filters directory-filters" aria-label="Filtros de técnicos">
+      <h2>Filtrar</h2>
+      <label className="field">Especialidad<select name="especialidadId" value={especialidad} onChange={event => setEspecialidad(event.target.value)} disabled={!catalogos}>
         <option value="">Todas las especialidades</option>
         {catalogos?.especialidades.map(item => <option value={item.id} key={item.id}>{item.nombre}</option>)}
       </select></label>
-      <label>Sector<select name="sectorId" value={sector} onChange={event => setSector(event.target.value)} disabled={!catalogos}>
+      <label className="field">Sector<select name="sectorId" value={sector} onChange={event => setSector(event.target.value)} disabled={!catalogos}>
         <option value="">Todos los sectores</option>
         {catalogos?.sectores.map(item => <option value={item.id} key={item.id}>{item.nombre} ({item.municipio})</option>)}
       </select></label>
-      <label>Resultados por página<select name="pageSize" defaultValue={filtros.get('pageSize') ?? '20'}>
+      <label className="field">Resultados por página<select name="pageSize" defaultValue={filtros.get('pageSize') ?? '20'}>
         <option value="10">10</option><option value="20">20</option><option value="50">50</option>
       </select></label>
-      <button type="submit" className="identity-button" disabled={!catalogos}>Buscar técnicos</button>
-      {consulta && <Link href="/tecnicos">Limpiar filtros</Link>}
-    </form>
+      <button type="submit" className="btn" disabled={!catalogos}>Buscar técnicos</button>
+      {consulta && <Link className="btn btn--ghost" href="/tecnicos">Limpiar filtros</Link>}
+    </form></aside>
     <section aria-label="Resultados de técnicos" aria-busy={cargando}>
       {cargando && <p role="status">Buscando técnicos…</p>}
       {Boolean(error) && <Fallo error={error} reintentar={() => setIntento(intento + 1)} />}
@@ -125,23 +134,30 @@ export function Directorio({ consulta }: { consulta: string }) {
           <p>{resultados.total === 0 ? 'Prueba otra especialidad o un sector diferente.' : 'Regresa a la primera página para ver los perfiles disponibles.'}</p>
           <Link href={resultados.total === 0 ? '/tecnicos' : pagina(1)}>{resultados.total === 0 ? 'Ver todos los técnicos' : 'Ir a la primera página'}</Link>
         </div>}
-        <ul className="directory-results">{resultados.items.map(tecnico => <li key={tecnico.id}>
-          <article>
-            <h2><Link href={`/tecnicos/${tecnico.id}`}>{tecnico.nombre}</Link></h2>
-            <p className="directory-specialties">{tecnico.especialidades.map(item => item.nombre).join(', ')}</p>
-            <p className="directory-summary">{tecnico.descripcion}</p>
-            <p>Atiende en {tecnico.sectores.map(item => item.nombre).join(', ')}.</p>
-            <Reputacion tecnico={tecnico} />
-            <Link href={`/tecnicos/${tecnico.id}`}>Ver perfil profesional</Link>
+        <ul className="tech-grid directory-results">{resultados.items.map(tecnico => <li key={tecnico.id}>
+          <article className="card tech-card">
+            <div className="tech-card__banner" data-tone={['indigo', 'mint', 'amber', 'sky'][resultados.items.indexOf(tecnico) % 4]}>
+              <span className="tech-card__avatar" aria-hidden="true">{tecnico.nombre.trim().split(/\s+/).slice(0, 2).map(parte => parte[0]).join('')}</span>
+              <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m14 6 4 4M4 20l8-8M16 3a5 5 0 0 0-6 6L3 16a3 3 0 0 0 5 5l7-7a5 5 0 0 0 6-6l-4 4-5-5 4-4Z" /></svg>
+            </div>
+            <div className="tech-card__body">
+              <h2><Link href={`/tecnicos/${tecnico.id}`}>{tecnico.nombre}</Link></h2>
+              <p className="directory-specialties muted">{tecnico.especialidades.map(item => item.nombre).join(', ')}</p>
+              <p className="directory-summary">{tecnico.descripcion}</p>
+              <ul className="tech-card__sectors" aria-label="Sectores de cobertura">{tecnico.sectores.map(item => <li key={item.id}><span className="tag tag--neutral">{item.nombre}</span></li>)}</ul>
+              <Reputacion tecnico={tecnico} />
+              <Link className="btn btn--block" href={`/tecnicos/${tecnico.id}`}>Ver perfil profesional</Link>
+            </div>
           </article>
         </li>)}</ul>
-        {(resultados.page > 1 || resultados.page * resultados.pageSize < resultados.total) && <nav className="directory-pagination" aria-label="Páginas de resultados">
-          {resultados.page > 1 && <Link href={pagina(resultados.page - 1)}>Anterior</Link>}
+        {(resultados.page > 1 || resultados.page * resultados.pageSize < resultados.total) && <nav className="pagination directory-pagination" aria-label="Páginas de resultados">
+          {resultados.page > 1 && <Link className="btn btn--ghost" href={pagina(resultados.page - 1)}>Anterior</Link>}
           <span>Página {resultados.page}</span>
-          {resultados.page * resultados.pageSize < resultados.total && <Link href={pagina(resultados.page + 1)}>Siguiente</Link>}
+          {resultados.page * resultados.pageSize < resultados.total && <Link className="btn btn--ghost" href={pagina(resultados.page + 1)}>Siguiente</Link>}
         </nav>}
       </>}
     </section>
+    </div>
   </Marco>;
 }
 
@@ -169,9 +185,9 @@ export function PerfilPublico({ id }: { id: string }) {
     {cargando && <p role="status">Cargando perfil…</p>}
     {noDisponible && <p role="status">Este perfil no existe o ya no está publicado. Consulta los técnicos disponibles en el buscador.</p>}
     {Boolean(error) && !noDisponible && <Fallo error={error} reintentar={() => setIntento(intento + 1)} />}
-    {perfil && <article className="directory-profile">
+    {perfil && <article className="card directory-profile public-profile">
       <Reputacion tecnico={perfil} />
-      <p><Link className="request-start" href={'/cliente/solicitudes/nueva?tecnico=' + encodeURIComponent(perfil.id)}>Solicitar servicio</Link></p>
+      <p><Link className="btn request-start" href={'/cliente/solicitudes/nueva?tecnico=' + encodeURIComponent(perfil.id)}>Solicitar servicio</Link></p>
       <h2>Servicios</h2>
       <p className="directory-description">{perfil.descripcion}</p>
       <h2>Especialidades</h2>
