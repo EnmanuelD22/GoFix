@@ -68,7 +68,7 @@ export function campoInvalido(error: unknown, campo: string, avisoId: string) {
 export function Marco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return <main className="directory requests">
     <div className="directory-content">
-      <SiteHeader />
+      <div className="requests-navigation theme-dark"><SiteHeader /></div>
       <h1>{titulo}</h1>
       {children}
     </div>
@@ -122,7 +122,7 @@ export function ListaSolicitudes({ rol, consulta }: { rol: Cuenta['rol']; consul
     {cuenta.error ? <Fallo error={cuenta.error} reintentar={cuenta.reintentar} /> : null}
     {cuenta.datos && cuenta.datos.rol !== rol && <p><Link href={rutaLista(cuenta.datos.rol)}>Ver las solicitudes de mi cuenta</Link></p>}
     {cuenta.datos?.rol === rol && <>
-      {rol === 'cliente' && <p><Link href="/cliente/solicitudes/nueva">Crear solicitud</Link></p>}
+      {rol === 'cliente' && <p><Link className="btn" href="/cliente/solicitudes/nueva">Crear solicitud</Link></p>}
       <form method="get" action={ruta} className="directory-filters" key={consulta} aria-label="Filtrar solicitudes">
         <label>Estado<select name="estado" defaultValue={filtros.get('estado') ?? ''}>
           <option value="">Todos los estados</option>
@@ -132,7 +132,7 @@ export function ListaSolicitudes({ rol, consulta }: { rol: Cuenta['rol']; consul
           <option>10</option><option>20</option><option>50</option>
         </select></label>
         <button type="submit" className="identity-button">Aplicar filtros</button>
-        <Link href={ruta}>Limpiar filtros</Link>
+        <Link className="btn btn--ghost" href={ruta}>Limpiar filtros</Link>
       </form>
     </>}
     {(cuenta.pendiente || resultados.pendiente) && <p role="status">Cargando solicitudes…</p>}
