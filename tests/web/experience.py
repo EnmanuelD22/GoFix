@@ -73,6 +73,17 @@ def main():
             Path(args.screenshots).mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(Path(args.screenshots) / (args.browser + "-" + name.replace(" ", "-") + ".png")), full_page=True)
 
+    def capture_layouts(page, name):
+        if not args.screenshots:
+            return
+        Path(args.screenshots).mkdir(parents=True, exist_ok=True)
+        for label, width in (("mobile", 360), ("desktop", 1440)):
+            page.set_viewport_size({"width": width, "height": 900})
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (name, width)
+            page.screenshot(path=str(Path(args.screenshots) /
+                (args.browser + "-" + name + "-" + label + ".png")), full_page=True)
+        page.set_viewport_size({"width": 360, "height": 900})
+
     def fields(page, title):
         page.locator("[name=especialidadId]").select_option(str(specialty))
         page.locator("[name=sectorId]").select_option(str(sector))
@@ -106,18 +117,38 @@ def main():
             page = customer.new_page()
             public = browser.new_context()
             public_page = public.new_page()
+            navigate(public_page, "/")
+            expect(public_page.get_by_role("heading", level=1)).to_contain_text("a un clic de tu puerta")
+            expect(public_page.locator(".search [name=especialidadId] option[value='" + str(specialty) + "']")).to_have_count(1)
+            expect(public_page.locator(".specialty-grid a").first).to_be_visible()
+            audit(public_page, "inicio")
+            capture_layouts(public_page, "inicio")
+            public_page.locator(".search [name=especialidadId]").select_option(str(specialty))
+            public_page.locator(".search [name=sectorId]").select_option(str(sector))
+            public_page.get_by_role("button", name="Buscar", exact=True).click()
+            expect(public_page.get_by_role("heading", name="Encuentra un técnico")).to_be_visible()
+            expect(public_page.locator("select[name=especialidadId]")).to_have_value(str(specialty))
+            expect(public_page.locator("select[name=sectorId]")).to_have_value(str(sector))
+            expect(public_page.locator(".tech-card").filter(has_text="Prueba Web tecnico")).to_be_visible()
+            expect(public_page.locator(".tech-card a[href='/tecnicos/" + tech_info["perfilTecnicoId"] + "']").last).to_be_visible()
+            audit(public_page, "directorio filtrado")
+            capture_layouts(public_page, "directorio")
             navigate(public_page, "/registro")
             audit(public_page, "registro")
             public_page.keyboard.press("Tab")
             assert public_page.evaluate("document.activeElement !== document.body")
-            public_page.keyboard.press("Enter")
+            # La cabecera y el logo contienen enlaces: Enter sobre el primer
+            # foco navegaría fuera del registro. Verificamos el orden del formulario.
+            public_page.locator("[name=rol]").focus()
             for field, value in {
                 "nombre": "Registro por teclado", "telefono": "+18095550123",
                 "correo": uuid4().hex + "@web.test", "contrasena": password
             }.items():
-                public_page.locator("[name=" + field + "]").focus()
+                public_page.keyboard.press("Tab")
+                expect(public_page.locator("[name=" + field + "]")).to_be_focused()
                 public_page.keyboard.insert_text(value)
-            public_page.get_by_role("button", name="Crear cuenta", exact=True).focus()
+            public_page.keyboard.press("Tab")
+            expect(public_page.get_by_role("button", name="Crear cuenta", exact=True)).to_be_focused()
             public_page.keyboard.press("Enter")
             expect(public_page).to_have_url(root + "/acceso?registro=ok")
             expect(public_page.locator("[name=contrasena]")).to_have_value("")

@@ -184,6 +184,8 @@ dotnet test GoFix.slnx
 
 `GoFix.Api.Tests` comprueba el contrato HTTP, la antifalsificación y la autorización. `GoFix.Integration.Tests` verifica migraciones, registro, edición, sesión e integridad con SQL Server. Configura `GOFIX_TEST_SQLSERVER` con una conexión exclusiva de pruebas que permita crear bases temporales. Las pruebas de Identidad crean y eliminan bases propias con nombre `GoFixIdentityTests_<guid>` y se omiten si falta esa configuración.
 
+El frontend integra el diseño Índigo Medianoche del modelo local: portada con catálogos reales, directorio con filtros, perfiles, panel técnico y formularios adaptables. Inter y Space Grotesk se distribuyen localmente con sus licencias. La navegación usa la sesión y el rol; los datos de demostración del modelo no sustituyen las respuestas de la API. La carpeta `gofix-frontend/` sigue siendo una referencia local ignorada por Git. Las pruebas web incluyen portada, búsqueda y capturas a 360 y 1440 px.
+
 ## Entrega y calidad
 
 La copia limpia se comprueba con `tests/Test-EntregaLimpia.ps1 -SqlServer 'lpc:.'`: restaura dependencias bloqueadas, compila .NET y Next.js y aplica las tres migraciones en una base SQL desechable. `tests/Test-Arquitectura.ps1` comprueba dependencias entre capas y módulos; `tests/Test-Api.ps1 -VerificarOpenApi` verifica los contratos HTTP principales. Las pruebas de integración SQL y el recorrido de navegador usan bases temporales independientes.
