@@ -3,13 +3,21 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useRef, useState, type FormEvent } from 'react';
-import { ErrorApi, guardar, type Cuenta } from '../auth/api';
-import { campoInvalido, Fallo, Marco, useConsulta, type Cobertura, type Opcion, type Solicitud } from './request-views';
+import { AppShell, useCuenta } from '../../components/AppShell';
+import { Campo } from '../../components/Campo';
+import { Aviso, Cargando, Vacio } from '../../components/Estados';
+import { Fallo } from '../../components/Fallo';
+import { Icon } from '../../components/Icon';
+import { iniciales, valorFechaLocal } from '../../lib/formato';
+import { useConsulta } from '../../lib/use-consulta';
+import { ErrorApi, guardar } from '../auth/api';
+import { useCatalogos } from '../catalogs/catalogos';
+import type { Cobertura, Solicitud } from './request-views';
 
-function fechaLocal(fecha: string) {
-  const local = new Date(fecha);
-  return new Date(local.getTime() - local.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+const etiquetas: Record<string, string> = {
+  especialidadId: 'Especialidad', sectorId: 'Sector', titulo: 'Título', descripcion: 'Descripción',
+  direccion: 'Dirección', fechaPreferida: 'Fecha y hora preferidas',
+};
 
 async function claveDeBorrador(clienteId: string, contenido: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contenido));
@@ -32,21 +40,21 @@ function guardarClave(borrador: string, clave: string | null) {
 }
 
 function Formulario({ clienteId, cobertura, item, actualizar }: {
-  clienteId: string; cobertura?: Cobertura; item?: Solicitud; actualizar?: () => void;
+  clienteId: string; cobertura: Cobertura; item?: Solicitud; actualizar?: () => void;
 }) {
   const router = useRouter();
   const avisoId = useId();
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [conflicto, setConflicto] = useState(false);
+  const [largos, setLargos] = useState({ titulo: item?.titulo.length ?? 0, descripcion: item?.descripcion.length ?? 0 });
   const enCurso = useRef(false);
   const intentos = useRef(new Map<string, string>());
-  const fechaInicial = item ? fechaLocal(item.fechaPreferida) : '';
-  const id = item?.id;
-  const detalle = id ? '/solicitudes/' + id : '/cliente/solicitudes';
-  const tecnicoId = item?.tecnicoId ?? cobertura?.id;
-  const especialidades = cobertura?.especialidades ?? [];
-  const sectores = cobertura?.sectores ?? [];
+  const fechaInicial = item ? valorFechaLocal(item.fechaPreferida) : '';
+  const [minimo] = useState(() => valorFechaLocal(new Date()));
+  const detalle = item ? '/solicitudes/' + item.id : '/cliente/solicitudes';
+  const especialidades = cobertura.especialidades;
+  const sectores = cobertura.sectores;
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -75,9 +83,8 @@ function Formulario({ clienteId, cobertura, item, actualizar }: {
         await guardar<Solicitud>(detalle, 'PUT', { ...campos, version: item.version });
         router.replace(detalle);
       } else {
-        const datos = { ...campos, tecnicoId, especialidadId: Number(formulario.get('especialidadId')) };
-        const contenido = JSON.stringify(datos);
-        const borrador = await claveDeBorrador(clienteId, contenido);
+        const datos = { ...campos, tecnicoId: cobertura.id, especialidadId: Number(formulario.get('especialidadId')) };
+        const borrador = await claveDeBorrador(clienteId, JSON.stringify(datos));
         const clave = intentos.current.get(borrador) ?? leerClave(borrador) ?? crypto.randomUUID();
         intentos.current.set(borrador, clave);
         guardarClave(borrador, clave);
@@ -98,56 +105,108 @@ function Formulario({ clienteId, cobertura, item, actualizar }: {
   }
 
   const especialidad = especialidades.find(opcion => opcion.id === item?.especialidadId);
+  const unicaEspecialidad = especialidades.length === 1 ? String(especialidades[0].id) : '';
+  const unicoSector = sectores.length === 1 ? String(sectores[0].id) : '';
   return <>
-    {error ? <Fallo error={error} id={avisoId} /> : null}
-    {conflicto && <p><button type="button" onClick={actualizar}>Cargar la versión actual</button></p>}
-    <form onSubmit={enviar} className="requests-form" aria-busy={ocupado} aria-describedby={error ? avisoId : undefined}>
+    {error ? <Fallo error={error} id={avisoId} etiquetas={etiquetas} /> : null}
+    {conflicto && <p><button type="button" className="btn btn--ghost" onClick={actualizar}><Icon name="refresh" size={18} />Cargar la versión actual</button></p>}
+    <form onSubmit={enviar} className="card requests-form stack-form" aria-busy={ocupado} aria-describedby={error ? avisoId : undefined}>
       <fieldset disabled={ocupado || conflicto}>
-        <legend>{cobertura?.nombre ? 'Visita con ' + cobertura.nombre : 'Datos de la visita'}</legend>
-        {item && especialidad && <p>Especialidad: {especialidad.nombre}</p>}
-        {!item && <label>Especialidad<select name="especialidadId" {...campoInvalido(error, "especialidadId", avisoId)} defaultValue="" required>
-          <option value="">Elige una especialidad</option>
-          {especialidades.map(opcion => <option key={opcion.id} value={opcion.id}>{opcion.nombre}</option>)}
-        </select></label>}
-        <label>Sector<select name="sectorId" {...campoInvalido(error, "sectorId", avisoId)} defaultValue={item?.sectorId ?? ''} required>
-          <option value="">Elige un sector</option>
-          {sectores.map(opcion => <option key={opcion.id} value={opcion.id}>{opcion.nombre}</option>)}
-        </select></label>
-        <label>Título<input name="titulo" minLength={10} {...campoInvalido(error, "titulo", avisoId)} defaultValue={item?.titulo} maxLength={120} required /></label>
-        <label>Descripción<textarea name="descripcion" minLength={20} {...campoInvalido(error, "descripcion", avisoId)} defaultValue={item?.descripcion} maxLength={2000} rows={5} required /></label>
-        <label>Dirección<input name="direccion" minLength={10} {...campoInvalido(error, "direccion", avisoId)} defaultValue={item?.direccion} maxLength={300} required /></label>
-        <label>Fecha y hora preferidas<input type="datetime-local" name="fechaPreferida" {...campoInvalido(error, "fechaPreferida", avisoId)} defaultValue={fechaInicial} required /></label>
-        <button className="identity-button" type="submit">{ocupado ? 'Guardando…' : item ? 'Guardar cambios' : 'Enviar solicitud'}</button>
+        <legend className="sr-only">Datos de la visita</legend>
+        <div className="form-grid">
+          {item
+            ? especialidad && <div className="field"><span className="field__label">Especialidad</span><p className="field__static">{especialidad.nombre}</p></div>
+            : <Campo etiqueta="Especialidad" nombre="especialidadId" error={error}>
+              {control => <select {...control} defaultValue={unicaEspecialidad} required>
+                <option value="">Elige una especialidad</option>
+                {especialidades.map(opcion => <option key={opcion.id} value={opcion.id}>{opcion.nombre}</option>)}
+              </select>}
+            </Campo>}
+          <Campo etiqueta="Sector" nombre="sectorId" error={error} ayuda="Solo se muestran los sectores que atiende el técnico.">
+            {control => <select {...control} defaultValue={item?.sectorId ?? unicoSector} required>
+              <option value="">Elige un sector</option>
+              {sectores.map(opcion => <option key={opcion.id} value={opcion.id}>{opcion.nombre}</option>)}
+            </select>}
+          </Campo>
+        </div>
+        <Campo etiqueta="Título" nombre="titulo" error={error} ayuda="Resume el problema en una frase. Ejemplo: Reparación de breaker en la cocina."
+          contador={{ actual: largos.titulo, maximo: 120 }}>
+          {control => <input {...control} minLength={10} maxLength={120} defaultValue={item?.titulo} required
+            onChange={event => setLargos(actual => ({ ...actual, titulo: event.target.value.length }))} />}
+        </Campo>
+        <Campo etiqueta="Descripción" nombre="descripcion" error={error} ayuda="Explica qué ocurre, desde cuándo y cualquier detalle útil para la visita."
+          contador={{ actual: largos.descripcion, maximo: 2000 }}>
+          {control => <textarea {...control} minLength={20} maxLength={2000} rows={5} defaultValue={item?.descripcion} required
+            onChange={event => setLargos(actual => ({ ...actual, descripcion: event.target.value.length }))} />}
+        </Campo>
+        <div className="form-grid">
+          <Campo etiqueta="Dirección" nombre="direccion" error={error} ayuda="Calle, número y una referencia. Mínimo 10 caracteres.">
+            {control => <input {...control} minLength={10} maxLength={300} autoComplete="street-address" defaultValue={item?.direccion} required />}
+          </Campo>
+          <Campo etiqueta="Fecha y hora preferidas" nombre="fechaPreferida" error={error} ayuda="El técnico confirmará la fecha definitiva al aceptar.">
+            {control => <input {...control} type="datetime-local" min={item ? undefined : minimo} defaultValue={fechaInicial} required />}
+          </Campo>
+        </div>
+        <div className="button-row">
+          <button className="btn" type="submit">{ocupado ? <><span className="spinner" aria-hidden="true" />Guardando…</>
+            : item ? 'Guardar cambios' : 'Enviar solicitud'}</button>
+          <Link className="btn btn--ghost" href={detalle}>Cancelar</Link>
+        </div>
       </fieldset>
     </form>
   </>;
 }
 
-export function EditorSolicitud({ id, tecnico }: { id?: string; tecnico?: string }) {
-  const cuenta = useConsulta<Cuenta>('/auth/me');
-  const cliente = cuenta.datos?.rol === 'cliente' ? cuenta.datos : undefined;
-  const detalle = useConsulta<Solicitud>(cliente && id ? '/solicitudes/' + encodeURIComponent(id) : null);
-  const tecnicoId = detalle.datos?.tecnicoId ?? tecnico;
-  const perfil = useConsulta<Cobertura>(cliente && tecnicoId ? '/tecnicos/' + encodeURIComponent(tecnicoId) : null);
-  const sectores = useConsulta<Opcion[]>(detalle.datos && perfil.error instanceof ErrorApi && perfil.error.status === 404 ? '/sectores' : null);
-  const especialidades = useConsulta<Opcion[]>(sectores.datos ? '/especialidades' : null);
-  const cobertura = perfil.datos ?? (sectores.datos && especialidades.datos && tecnicoId
-    ? { id: tecnicoId, nombre: '', sectores: sectores.datos, especialidades: especialidades.datos } : undefined);
-  const enlace = id ? '/solicitudes/' + id : '/cliente/solicitudes';
-  const error = cuenta.error ?? detalle.error ?? sectores.error ?? especialidades.error ??
-    (sectores.pendiente || sectores.datos ? undefined : perfil.error);
+function ResumenTecnico({ cobertura }: { cobertura: Cobertura }) {
+  if (!cobertura.nombre) return null;
+  return <aside className="card tech-summary" aria-label="Técnico seleccionado">
+    <span className="tech-card__avatar" aria-hidden="true">{iniciales(cobertura.nombre)}</span>
+    <div>
+      <p className="muted">Solicitud para</p>
+      <p className="tech-summary__name"><Link href={'/tecnicos/' + cobertura.id}>{cobertura.nombre}</Link></p>
+      <p className="muted">{cobertura.especialidades.map(item => item.nombre).join(' · ')}</p>
+    </div>
+  </aside>;
+}
 
-  return <Marco titulo={id ? 'Editar solicitud' : 'Nueva solicitud'}>
-    <p><Link href={enlace}>{id ? 'Volver al detalle' : 'Volver a mis solicitudes'}</Link></p>
-    {(cuenta.pendiente || detalle.pendiente || perfil.pendiente || sectores.pendiente || especialidades.pendiente) &&
-      <p role="status">Cargando datos de la visita…</p>}
-    {error ? <Fallo error={error} reintentar={cuenta.error ? cuenta.reintentar : detalle.error ? detalle.reintentar
-      : sectores.error ? sectores.reintentar : especialidades.error ? especialidades.reintentar : perfil.reintentar} /> : null}
-    {cuenta.datos?.rol === 'tecnico' && <p>Las solicitudes se crean y editan desde una cuenta de cliente.</p>}
-    {cliente && !id && !tecnico && <p><Link href="/tecnicos">Busca un técnico</Link> y elige «Solicitar servicio» en su perfil.</p>}
-    {detalle.datos && detalle.datos.estado !== 'Pendiente' && <p>Solo puedes editar solicitudes pendientes.</p>}
-    {cliente && cobertura && (!id || detalle.datos?.estado === 'Pendiente') &&
-      <Formulario key={detalle.datos?.version ?? cobertura.id} clienteId={cliente.id} cobertura={cobertura}
-        item={detalle.datos} actualizar={detalle.reintentar} />}
-  </Marco>;
+function Contenido({ id, tecnico }: { id?: string; tecnico?: string }) {
+  const { cuenta } = useCuenta();
+  const detalle = useConsulta<Solicitud>(id ? '/solicitudes/' + encodeURIComponent(id) : null);
+  const tecnicoId = detalle.datos?.tecnicoId ?? (id ? undefined : tecnico);
+  const perfil = useConsulta<Cobertura>(tecnicoId ? '/tecnicos/' + encodeURIComponent(tecnicoId) : null);
+  // Si el perfil dejó de publicarse, la edición usa los catálogos activos.
+  const sinPerfil = Boolean(detalle.datos) && perfil.error instanceof ErrorApi && perfil.error.status === 404;
+  const catalogos = useCatalogos();
+  const cobertura: Cobertura | undefined = perfil.datos ?? (sinPerfil && catalogos.datos && tecnicoId
+    ? { id: tecnicoId, nombre: '', sectores: catalogos.datos.sectores, especialidades: catalogos.datos.especialidades } : undefined);
+
+  if (!id && !tecnico) return <Vacio icono="search" titulo="Elige primero un técnico" accion={{ href: '/tecnicos', texto: 'Buscar técnicos' }}>
+    Busca un técnico de tu zona y elige «Solicitar servicio» en su perfil.
+  </Vacio>;
+  if (detalle.pendiente || perfil.pendiente || (sinPerfil && catalogos.pendiente)) return <Cargando texto="Cargando datos de la visita…" filas={4} />;
+  if (detalle.error) return <Fallo error={detalle.error} reintentar={detalle.reintentar} />;
+  if (perfil.error && !sinPerfil) return <>
+    <Fallo error={perfil.error} reintentar={perfil.reintentar}
+      mensajes={{ 404: 'Este técnico ya no está disponible. Elige otro técnico en el directorio.' }} />
+    <p><Link href="/tecnicos">Volver al directorio</Link></p>
+  </>;
+  if (sinPerfil && catalogos.error) return <Fallo error={catalogos.error} reintentar={catalogos.reintentar} />;
+  if (detalle.datos && detalle.datos.estado !== 'Pendiente') return <Aviso tono="warning">
+    <p>Solo puedes editar solicitudes pendientes. <Link href={'/solicitudes/' + detalle.datos.id}>Volver al detalle</Link></p>
+  </Aviso>;
+  if (!cobertura) return null;
+  return <div className="editor-layout">
+    <ResumenTecnico cobertura={cobertura} />
+    {sinPerfil && <Aviso tono="warning"><p>El perfil del técnico ya no está publicado. Puedes actualizar los datos de la visita con los catálogos activos.</p></Aviso>}
+    <Formulario key={detalle.datos?.version ?? cobertura.id} clienteId={cuenta.id} cobertura={cobertura}
+      item={detalle.datos} actualizar={detalle.reintentar} />
+  </div>;
+}
+
+export function EditorSolicitud({ id, tecnico }: { id?: string; tecnico?: string }) {
+  return <AppShell rol="cliente" titulo={id ? 'Editar solicitud' : 'Nueva solicitud'}
+    descripcion={id ? 'Puedes modificar la solicitud mientras siga pendiente.' : 'Describe el servicio que necesitas. El técnico la revisará y confirmará la visita.'}
+    volver={id ? { href: '/solicitudes/' + id, texto: 'Volver al detalle' } : { href: '/cliente/solicitudes', texto: 'Mis solicitudes' }}>
+    <Contenido id={id} tecnico={tecnico} />
+  </AppShell>;
 }
