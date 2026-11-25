@@ -46,7 +46,7 @@ Marca cada casilla cuando el alcance indicado esté implementado y verificado. L
 - [x] **2. Consulta de profesionales (RF-06 y RF-07).** Búsqueda paginada por especialidad y sector, perfil público y reputación sin exponer contactos privados.
 - [x] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
 - [x] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
-- [ ] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
+- [x] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
 - [ ] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
 - [ ] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
 - [ ] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
@@ -117,7 +117,7 @@ Accede a `/tecnicos` para filtrar por especialidad y sector. La página conserva
 
 La API admite `especialidadId`, `sectorId`, `page` (inicial 1) y `pageSize` (inicial 20, máximo 50). Devuelve `items`, `page`, `pageSize` y `total`. Los perfiles incompletos o sin cobertura activa quedan fuera del directorio y su detalle devuelve 404. Las respuestas públicas conservan la privacidad de los datos de cuenta.
 
-El promedio y la cantidad se calculan desde las valoraciones persistidas mediante un contrato del módulo Valoraciones. El envío de opiniones y su listado detallado están previstos en el módulo 5.
+El promedio y la cantidad se calculan desde las valoraciones persistidas mediante un contrato del módulo Valoraciones. Los clientes pueden valorar sus servicios completados y consultar las opiniones paginadas en el perfil público del técnico.
 
 ## Solicitudes de servicio
 
@@ -132,6 +132,14 @@ En el detalle de una solicitud, el técnico puede aceptar con fecha confirmada f
 El contacto de la contraparte aparece después de la aceptación y se conserva al cancelar un servicio que había sido aceptado. El panel de `/tecnico/panel` muestra pendientes, aceptadas, servicios en proceso y las próximas diez visitas futuras.
 
 La API añade `POST /api/v1/solicitudes/{id}/{aceptar|rechazar|cancelar|iniciar|completar}`, `GET /api/v1/solicitudes/{id}/historial` y `GET /api/v1/tecnicos/me/resumen`. Las transiciones envían `version` y los datos de la acción. Un conflicto HTTP 409 requiere consultar de nuevo el detalle antes de confirmar otra acción.
+
+## Valoraciones
+
+El cliente puede publicar una valoración desde el detalle de su servicio completado. La puntuación es un entero de 1 a 5 y el comentario opcional admite hasta 1.000 caracteres. La confirmación publica una opinión inmutable por solicitud. Un reenvío devuelve conflicto y permite consultar la opinión ya guardada.
+
+El perfil público del técnico muestra opiniones paginadas con nombre de pila del cliente, puntuación, comentario y fecha. El promedio se calcula desde las valoraciones persistidas y se presenta con una cifra decimal.
+
+La API expone `POST /api/v1/solicitudes/{id}/valoracion`, `GET` sobre esa misma ruta para consultar la opinión propia y `GET /api/v1/tecnicos/{id}/valoraciones?page=1&pageSize=20` para las opiniones públicas. La consulta privada devuelve 204 cuando aún no existe una valoración.
 
 ## Verificación y publicación
 
