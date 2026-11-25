@@ -194,10 +194,20 @@ public sealed class IdentitySqlTests : IAsyncLifetime
 
         using var fifth = await LoginAsync(client, email, wrongPassword);
         Assert.Equal(genericError, await ReadCredentialErrorAsync(fifth));
-        Assert.True(await accounts.Select(user => user.LockoutEnd).SingleAsync() > DateTimeOffset.UtcNow);
+        var lockoutEnd = await accounts.Select(user => user.LockoutEnd).SingleAsync();
+        Assert.NotNull(lockoutEnd);
+        Assert.InRange(lockoutEnd.Value - DateTimeOffset.UtcNow, TimeSpan.FromMinutes(14), TimeSpan.FromMinutes(15));
 
         using var locked = await LoginAsync(client, email);
         Assert.Equal(genericError, await ReadCredentialErrorAsync(locked));
+
+        // Simula el vencimiento de la ventana persistida solo en la base desechable.
+        await db.Users.Where(user => user.Email == email)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(user => user.LockoutEnd, DateTimeOffset.UtcNow.AddSeconds(-1)));
+        using var recovered = await LoginAsync(client, email);
+        Assert.Equal(HttpStatusCode.OK, recovered.StatusCode);
+        Assert.Equal(0, await accounts.Select(user => user.AccessFailedCount).SingleAsync());
+        Assert.True(await accounts.Select(user => user.LockoutEnd).SingleAsync() <= DateTimeOffset.UtcNow);
     }
 
     [SqlServerFact]
