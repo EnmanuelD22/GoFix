@@ -7,6 +7,7 @@ import { ErrorApi, solicitar } from '../auth/api';
 import { OpinionesPublicas } from '../reviews/review-views';
 import { SiteHeader } from '../../components/SiteHeader';
 import { SiteFooter } from '../../components/SiteFooter';
+import { Icon, type IconName } from '../../components/Icon';
 
 type Especialidad = { id: number; nombre: string };
 type Sector = Especialidad & { municipio: string };
@@ -20,6 +21,17 @@ type Tecnico = {
   cantidadValoraciones: number;
 };
 type Resultados = { items: Tecnico[]; page: number; pageSize: number; total: number };
+
+function estiloEspecialidad(nombre: string): { tone: string; icon: IconName } {
+  const normal = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (normal.includes('electric')) return { tone: 'amber', icon: 'bolt' };
+  if (normal.includes('plomer')) return { tone: 'mint', icon: 'drop' };
+  if (normal.includes('refriger') || normal.includes('aire acondicionado')) return { tone: 'indigo', icon: 'snow' };
+  if (normal.includes('electrodom')) return { tone: 'sky', icon: 'tv' };
+  if (normal.includes('cerrajer')) return { tone: 'rose', icon: 'hammer' };
+  if (normal.includes('pint')) return { tone: 'violet', icon: 'paint' };
+  return { tone: 'indigo', icon: 'wrench' };
+}
 
 function Marco({ titulo, children }: { titulo: string; children: ReactNode }) {
   return <>
@@ -50,9 +62,12 @@ function Fallo({ error, reintentar }: { error: unknown; reintentar: () => void }
 }
 
 function Reputacion({ tecnico }: { tecnico: Tecnico }) {
-  return <p className="rating tech-card__rating">{tecnico.cantidadValoraciones === 0 || tecnico.promedio === null
-    ? 'Sin valoraciones'
-    : `${tecnico.promedio.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5 · ${tecnico.cantidadValoraciones} ${tecnico.cantidadValoraciones === 1 ? 'valoración' : 'valoraciones'}`}</p>;
+  const disponible = tecnico.cantidadValoraciones > 0 && tecnico.promedio !== null;
+  return <p className="rating tech-card__rating">{disponible ? <>
+    <Icon name="star" size={16} filled />
+    <b>{tecnico.promedio!.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} de 5</b>
+    <span className="muted">· {tecnico.cantidadValoraciones} {tecnico.cantidadValoraciones === 1 ? 'valoración' : 'valoraciones'}</span>
+  </> : <span className="muted">Sin valoraciones</span>}</p>;
 }
 
 export function Directorio({ consulta }: { consulta: string }) {
@@ -105,7 +120,14 @@ export function Directorio({ consulta }: { consulta: string }) {
     return `/tecnicos?${siguiente}`;
   }
 
+  const municipios = [...new Set((catalogos?.sectores ?? []).map(item => item.municipio))];
+  const municipio = catalogos?.sectores.find(item => String(item.id) === sector)?.municipio
+    ?? (municipios.length === 1 ? municipios[0] : null);
+  const totalPaginas = resultados ? Math.ceil(resultados.total / resultados.pageSize) : 0;
+  const paginas = resultados ? Array.from({ length: Math.min(5, totalPaginas) }, (_, indice) =>
+    Math.max(1, Math.min(resultados.page - 2, totalPaginas - 4)) + indice) : [];
   return <Marco titulo="Encuentra un técnico">
+    {municipio && <p className="directory-location">Técnicos en {municipio}</p>}
     <p className="page-head__lead muted">Busca por especialidad y sector. Tus filtros quedan guardados en la dirección de la página.</p>
     <div className="directory-layout">
     <aside aria-label="Filtros"><form key={consulta} method="get" onSubmit={buscar} className="card filters directory-filters" aria-label="Filtros de técnicos">
@@ -136,9 +158,9 @@ export function Directorio({ consulta }: { consulta: string }) {
         </div>}
         <ul className="tech-grid directory-results">{resultados.items.map(tecnico => <li key={tecnico.id}>
           <article className="card tech-card">
-            <div className="tech-card__banner" data-tone={['indigo', 'mint', 'amber', 'sky'][resultados.items.indexOf(tecnico) % 4]}>
+            <div className="tech-card__banner" data-tone={estiloEspecialidad(tecnico.especialidades[0]?.nombre ?? '').tone}>
               <span className="tech-card__avatar" aria-hidden="true">{tecnico.nombre.trim().split(/\s+/).slice(0, 2).map(parte => parte[0]).join('')}</span>
-              <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="m14 6 4 4M4 20l8-8M16 3a5 5 0 0 0-6 6L3 16a3 3 0 0 0 5 5l7-7a5 5 0 0 0 6-6l-4 4-5-5 4-4Z" /></svg>
+              <Icon name={estiloEspecialidad(tecnico.especialidades[0]?.nombre ?? '').icon} size={28} />
             </div>
             <div className="tech-card__body">
               <h2><Link href={`/tecnicos/${tecnico.id}`}>{tecnico.nombre}</Link></h2>
@@ -152,7 +174,7 @@ export function Directorio({ consulta }: { consulta: string }) {
         </li>)}</ul>
         {(resultados.page > 1 || resultados.page * resultados.pageSize < resultados.total) && <nav className="pagination directory-pagination" aria-label="Páginas de resultados">
           {resultados.page > 1 && <Link className="btn btn--ghost" href={pagina(resultados.page - 1)}>Anterior</Link>}
-          <span>Página {resultados.page}</span>
+          {paginas.map(numero => <Link key={numero} className={numero === resultados.page ? 'btn' : 'btn btn--ghost'} href={pagina(numero)} aria-current={numero === resultados.page ? 'page' : undefined} aria-label={`Página ${numero}`}>{numero}</Link>)}
           {resultados.page * resultados.pageSize < resultados.total && <Link className="btn btn--ghost" href={pagina(resultados.page + 1)}>Siguiente</Link>}
         </nav>}
       </>}
