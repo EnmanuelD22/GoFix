@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { ErrorApi, guardar, type Cuenta } from '../auth/api';
-import { Fallo, Marco, useConsulta, type Cobertura, type Opcion, type Solicitud } from './request-views';
+import { campoInvalido, Fallo, Marco, useConsulta, type Cobertura, type Opcion, type Solicitud } from './request-views';
 
 function fechaLocal(fecha: string) {
   const local = new Date(fecha);
@@ -35,6 +35,7 @@ function Formulario({ clienteId, cobertura, item, actualizar }: {
   clienteId: string; cobertura?: Cobertura; item?: Solicitud; actualizar?: () => void;
 }) {
   const router = useRouter();
+  const avisoId = useId();
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [conflicto, setConflicto] = useState(false);
@@ -98,24 +99,24 @@ function Formulario({ clienteId, cobertura, item, actualizar }: {
 
   const especialidad = especialidades.find(opcion => opcion.id === item?.especialidadId);
   return <>
-    {error ? <Fallo error={error} /> : null}
+    {error ? <Fallo error={error} id={avisoId} /> : null}
     {conflicto && <p><button type="button" onClick={actualizar}>Cargar la versión actual</button></p>}
-    <form onSubmit={enviar} className="requests-form">
+    <form onSubmit={enviar} className="requests-form" aria-busy={ocupado} aria-describedby={error ? avisoId : undefined}>
       <fieldset disabled={ocupado || conflicto}>
         <legend>{cobertura?.nombre ? 'Visita con ' + cobertura.nombre : 'Datos de la visita'}</legend>
         {item && especialidad && <p>Especialidad: {especialidad.nombre}</p>}
-        {!item && <label>Especialidad<select name="especialidadId" defaultValue="" required>
+        {!item && <label>Especialidad<select name="especialidadId" {...campoInvalido(error, "especialidadId", avisoId)} defaultValue="" required>
           <option value="">Elige una especialidad</option>
           {especialidades.map(opcion => <option key={opcion.id} value={opcion.id}>{opcion.nombre}</option>)}
         </select></label>}
-        <label>Sector<select name="sectorId" defaultValue={item?.sectorId ?? ''} required>
+        <label>Sector<select name="sectorId" {...campoInvalido(error, "sectorId", avisoId)} defaultValue={item?.sectorId ?? ''} required>
           <option value="">Elige un sector</option>
           {sectores.map(opcion => <option key={opcion.id} value={opcion.id}>{opcion.nombre}</option>)}
         </select></label>
-        <label>Título<input name="titulo" defaultValue={item?.titulo} maxLength={120} required /></label>
-        <label>Descripción<textarea name="descripcion" defaultValue={item?.descripcion} maxLength={2000} rows={5} required /></label>
-        <label>Dirección<input name="direccion" defaultValue={item?.direccion} maxLength={300} required /></label>
-        <label>Fecha y hora preferidas<input type="datetime-local" name="fechaPreferida" defaultValue={fechaInicial} required /></label>
+        <label>Título<input name="titulo" minLength={10} {...campoInvalido(error, "titulo", avisoId)} defaultValue={item?.titulo} maxLength={120} required /></label>
+        <label>Descripción<textarea name="descripcion" minLength={20} {...campoInvalido(error, "descripcion", avisoId)} defaultValue={item?.descripcion} maxLength={2000} rows={5} required /></label>
+        <label>Dirección<input name="direccion" minLength={10} {...campoInvalido(error, "direccion", avisoId)} defaultValue={item?.direccion} maxLength={300} required /></label>
+        <label>Fecha y hora preferidas<input type="datetime-local" name="fechaPreferida" {...campoInvalido(error, "fechaPreferida", avisoId)} defaultValue={fechaInicial} required /></label>
         <button className="identity-button" type="submit">{ocupado ? 'Guardando…' : item ? 'Guardar cambios' : 'Enviar solicitud'}</button>
       </fieldset>
     </form>

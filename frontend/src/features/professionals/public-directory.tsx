@@ -36,6 +36,7 @@ function Fallo({ error, reintentar }: { error: unknown; reintentar: () => void }
   const api = error instanceof ErrorApi ? error : null;
   return <div className="identity-notice" role="alert">
     <p>{api?.status === 400 ? 'Los filtros o la página no son válidos. Revisa la búsqueda.'
+      : api && [0, 408].includes(api.status) ? api.message
       : 'No se pudo cargar la información. Vuelve a intentarlo.'}</p>
     {api?.problema.errors && <ul>{Object.entries(api.problema.errors).map(([campo, mensajes]) =>
       <li key={campo}>{mensajes.join(' ')}</li>)}</ul>}

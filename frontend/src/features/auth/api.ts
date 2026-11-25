@@ -16,16 +16,34 @@ export class ErrorApi extends Error {
 }
 
 export async function solicitar<T>(ruta: string, opciones?: RequestInit): Promise<T> {
-  const respuesta = await fetch(`/api/v1${ruta}`, {
-    ...opciones, credentials: 'same-origin', cache: 'no-store',
-  });
-  if (!respuesta.ok) {
-    const problema: Problema = await respuesta.json().catch(() => ({}));
-    throw new ErrorApi(respuesta.status, problema ?? {});
+  const limite = AbortSignal.timeout(30_000);
+  const signal = opciones?.signal ? AbortSignal.any([opciones.signal, limite]) : limite;
+  try {
+    const respuesta = await fetch('/api/v1' + ruta, {
+      ...opciones, signal, credentials: 'same-origin', cache: 'no-store',
+    });
+    if (!respuesta.ok) {
+      if (respuesta.status === 401 && !['/auth/login', '/auth/register'].includes(ruta.split('?')[0])
+        && typeof window !== 'undefined' && window.location.pathname !== '/acceso') {
+        window.location.replace('/acceso?sesion=expirada');
+      }
+      const problema: Problema = await respuesta.json().catch((fallo: unknown) => {
+        if (signal.aborted) throw fallo;
+        return {};
+      });
+      throw new ErrorApi(respuesta.status, problema ?? {});
+    }
+    if (respuesta.status === 204 || respuesta.headers.get('content-length') === '0') return undefined as T;
+    if (!respuesta.headers.get('content-type')?.includes('json')) return undefined as T;
+    return await respuesta.json();
+  } catch (fallo) {
+    if (opciones?.signal?.aborted) throw fallo;
+    if (limite.aborted) {
+      throw new ErrorApi(408, { title: 'La operación tardó demasiado. Revisa su resultado antes de volver a enviarla.' });
+    }
+    if (fallo instanceof ErrorApi) throw fallo;
+    throw new ErrorApi(0, { title: 'No pudimos conectar. Comprueba tu conexión y vuelve a intentarlo.' });
   }
-  if (respuesta.status === 204 || respuesta.headers.get('content-length') === '0') return undefined as T;
-  if (!respuesta.headers.get('content-type')?.includes('json')) return undefined as T;
-  return respuesta.json();
 }
 
 export function consultarCuenta(signal?: AbortSignal) {
