@@ -87,6 +87,24 @@ try {
             if ([string]::IsNullOrWhiteSpace($document.openapi) -or -not $document.paths.'/api/v1/auth/csrf'.get) {
                 throw 'OpenAPI debe documentar la operacion antifalsificacion.'
             }
+            $requiredOperations = @{
+                '/api/v1/auth/register' = @('post')
+                '/api/v1/auth/login' = @('post')
+                '/api/v1/tecnicos' = @('get')
+                '/api/v1/tecnicos/{id}' = @('get')
+                '/api/v1/tecnicos/me/perfil' = @('get', 'put')
+                '/api/v1/solicitudes' = @('get', 'post')
+                '/api/v1/solicitudes/{id}' = @('get', 'put', 'delete')
+                '/api/v1/solicitudes/{id}/historial' = @('get')
+                '/api/v1/solicitudes/{id}/valoracion' = @('get', 'post')
+            }
+            foreach ($path in $requiredOperations.Keys) {
+                foreach ($method in $requiredOperations[$path]) {
+                    if (-not $document.paths.$path.$method) {
+                        throw "OpenAPI no documenta $($method.ToUpperInvariant()) $path."
+                    }
+                }
+            }
         } finally {
             $openApi.Dispose()
         }

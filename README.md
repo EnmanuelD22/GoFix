@@ -49,7 +49,7 @@ Marca cada casilla cuando el alcance indicado esté implementado y verificado. L
 - [x] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
 - [x] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
 - [x] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
-- [ ] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
+- [x] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
 
 Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y pruebas aplicables. Las pruebas con SQL Server real verifican restricciones, transacciones y concurrencia.
 
@@ -184,6 +184,13 @@ dotnet test GoFix.slnx
 
 `GoFix.Api.Tests` comprueba el contrato HTTP, la antifalsificación y la autorización. `GoFix.Integration.Tests` verifica migraciones, registro, edición, sesión e integridad con SQL Server. Configura `GOFIX_TEST_SQLSERVER` con una conexión exclusiva de pruebas que permita crear bases temporales. Las pruebas de Identidad crean y eliminan bases propias con nombre `GoFixIdentityTests_<guid>` y se omiten si falta esa configuración.
 
+## Entrega y calidad
+
+La copia limpia se comprueba con `tests/Test-EntregaLimpia.ps1 -SqlServer 'lpc:.'`: restaura dependencias bloqueadas, compila .NET y Next.js y aplica las tres migraciones en una base SQL desechable. `tests/Test-Arquitectura.ps1` comprueba dependencias entre capas y módulos; `tests/Test-Api.ps1 -VerificarOpenApi` verifica los contratos HTTP principales. Las pruebas de integración SQL y el recorrido de navegador usan bases temporales independientes.
+
+El ensayo de rendimiento reproducible está en [tests/performance](tests/performance/README.md). El [resultado local](tests/performance/result-2026-11-25.json) del 25 de noviembre de 2026 registró 600,11 s, 20 usuarios, 1.000 técnicos, 143.904 peticiones y cero errores: p95 de 253,8 ms en lecturas y 104,96 ms en escrituras. Estos valores corresponden al equipo y la base aislada descritos en el informe.
+
+La [guía de base de datos](docs/BaseDeDatos.md#respaldo-y-ensayo-de-recuperación-rnf-09) explica el respaldo previo a migraciones, el job diario de SQL Server Agent y el ensayo de restauración aislada. La instancia local ejecutó el job correctamente. El objetivo propuesto de RPO de 24 h y RTO de 4 h en otro entorno requiere vigilar fallos, copiar respaldos fuera del servidor y repetir el ensayo con sus datos y hardware.
 ## Contribución e integración
 
 Cada cambio parte de `dev` actualizado en una rama `feature/` o `hotfix/`. La misma rama se integra mediante PR primero a `dev`, después a `qa` y finalmente a `main`, fusionando cada PR con merge commit antes de abrir el siguiente. Se conservan las ramas como evidencia de la práctica. No se trabaja directamente en las ramas permanentes ni se utilizan commits vacíos o force push.
