@@ -51,6 +51,9 @@ public static class InfrastructureRegistration
         services.AddScoped<IProfessionalDirectory, EfProfessionalDirectory>();
         services.AddScoped<DirectoryService>();
         services.AddScoped<IReviewQuery, EfReviewQuery>();
+        services.AddScoped<IReviewEligibility, EfReviewEligibility>();
+        services.AddScoped<IReviewStore, EfReviewStore>();
+        services.AddScoped<ReviewService>();
         services.AddScoped<IRepositorioSolicitudes, EfServiceRequestStore>();
         services.AddScoped<ServiceRequestService>();
 
