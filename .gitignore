@@ -443,3 +443,4 @@ FodyWeavers.xsd
 next-env.d.ts
 *.tsbuildinfo
 /frontend/certificates/
+gofix-frontend/

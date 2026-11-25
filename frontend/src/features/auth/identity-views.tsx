@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { consultarCuenta, ErrorApi, guardar, type Cuenta } from './api';
 
 function Panel({ titulo, children }: { titulo: string; children: ReactNode }) {
@@ -28,15 +28,18 @@ function campoInvalido(error: unknown, nombre: string, ayuda?: string) {
 }
 
 function Aviso({ error, acceso = false }: { error: unknown; acceso?: boolean }) {
+  const aviso = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) aviso.current?.focus(); }, [error]);
   if (!error) return null;
   const api = error instanceof ErrorApi ? error : null;
   const mensaje = api?.status === 429 ? 'Hay demasiados intentos. Espera unos minutos y vuelve a intentarlo.'
     : api?.status === 401 ? (acceso ? 'No se pudo iniciar sesión con esas credenciales.' : 'Tu sesión venció. Inicia sesión de nuevo.')
     : api?.status === 400 ? 'Revisa los datos e inténtalo de nuevo.'
+    : api && [0, 408].includes(api.status) ? api.message
     : 'No se pudo completar la operación. Vuelve a intentarlo.';
   const campos = Object.entries(api?.problema.errors ?? {});
   return (
-    <div className="identity-notice" role="alert">
+    <div ref={aviso} tabIndex={-1} className="identity-notice" role="alert">
       {mensaje}
       {campos.length > 0 && <ul>{campos.map(([campo, errores]) => (
         <li key={campo} id={`error-${campo}`}>{etiquetas[campo.toLowerCase()] ?? campo} — {errores.join(' ')}</li>
@@ -56,14 +59,16 @@ function Contacto({ cuenta, error }: { cuenta?: Cuenta; error: unknown }) {
   </>;
 }
 
-export function Acceso({ registro, cuentaCreada = false }: { registro: boolean; cuentaCreada?: boolean }) {
+export function Acceso({ registro, cuentaCreada = false, sesionExpirada = false }: { registro: boolean; cuentaCreada?: boolean; sesionExpirada?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<unknown>(null);
   const [ocupado, setOcupado] = useState(false);
+  const enCurso = useRef(false);
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (ocupado) return;
+    if (enCurso.current) return;
+    enCurso.current = true;
     setOcupado(true);
     setError(null);
     const datos = Object.fromEntries(new FormData(event.currentTarget));
@@ -72,12 +77,14 @@ export function Acceso({ registro, cuentaCreada = false }: { registro: boolean; 
       router.replace(registro ? '/acceso?registro=ok' : '/cuenta');
     } catch (fallo) {
       setError(fallo);
+      enCurso.current = false;
       setOcupado(false);
     }
   }
 
   return (
     <Panel titulo={registro ? 'Crea tu cuenta' : 'Inicia sesión'}>
+      {sesionExpirada && <p role="status">Tu sesión venció. Inicia sesión de nuevo para continuar.</p>}
       {cuentaCreada && <p className="identity-success" role="status">Tu cuenta está lista. Inicia sesión para continuar.</p>}
       <Aviso error={error} acceso={!registro} />
       <form method="post" onSubmit={enviar} aria-busy={ocupado}>
@@ -108,13 +115,14 @@ export function MiCuenta() {
   const [cargando, setCargando] = useState(true);
   const [intento, setIntento] = useState(0);
   const [ocupado, setOcupado] = useState(false);
+  const enCurso = useRef(false);
   const [guardado, setGuardado] = useState(false);
 
   useEffect(() => {
     const control = new AbortController();
     consultarCuenta(control.signal).then(setCuenta).catch((fallo: unknown) => {
       if (control.signal.aborted) return;
-      if (fallo instanceof ErrorApi && fallo.status === 401) router.replace('/acceso');
+      if (fallo instanceof ErrorApi && fallo.status === 401) router.replace('/acceso?sesion=expirada');
       else setError(fallo);
     }).finally(() => { if (!control.signal.aborted) setCargando(false); });
     return () => control.abort();
@@ -122,7 +130,8 @@ export function MiCuenta() {
 
   async function editar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (ocupado) return;
+    if (enCurso.current) return;
+    enCurso.current = true;
     setOcupado(true);
     setGuardado(false);
     setError(null);
@@ -131,18 +140,19 @@ export function MiCuenta() {
       setCuenta(await guardar<Cuenta>('/cuenta', 'PUT', datos));
       setGuardado(true);
     } catch (fallo) { setError(fallo); }
-    finally { setOcupado(false); }
+    finally { enCurso.current = false; setOcupado(false); }
   }
 
   async function salir() {
-    if (ocupado) return;
+    if (enCurso.current) return;
+    enCurso.current = true;
     setOcupado(true);
     setError(null);
     try {
       await guardar('/auth/logout', 'POST');
       setCuenta(null);
       router.replace('/acceso');
-    } catch (fallo) { setError(fallo); setOcupado(false); }
+    } catch (fallo) { setError(fallo); enCurso.current = false; setOcupado(false); }
   }
 
   return (

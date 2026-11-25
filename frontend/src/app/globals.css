@@ -252,3 +252,20 @@ h1 {
 .requests-counts a { display: grid; gap: 0.5rem; }
 .requests-counts strong { font-size: 2rem; }
 .requests-detail section { margin-block: 1.5rem; }
+
+/* Los textos reales y los controles conservan su espacio dentro de pantallas estrechas. */
+*, *::before, *::after { box-sizing: border-box; }
+body { overflow-wrap: anywhere; }
+main, section, article, form, fieldset { min-inline-size: 0; }
+h1, h2, h3, legend { overflow-wrap: anywhere; }
+button, input, select, textarea { max-inline-size: 100%; }
+button, a, input, select, textarea { touch-action: manipulation; }
+button { white-space: normal; }
+:focus-visible { outline: 0.18rem solid #8e3d1f; outline-offset: 0.2rem; }
+.directory-nav { flex-wrap: wrap; }
+.requests dialog { max-block-size: calc(100svh - 2rem); overflow-y: auto; }
+.requests-form [aria-invalid="true"], .identity [aria-invalid="true"] { border: 2px solid #77371d; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
