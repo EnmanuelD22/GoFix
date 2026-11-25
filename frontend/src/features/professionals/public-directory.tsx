@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ErrorApi, solicitar } from '../auth/api';
+import { OpinionesPublicas } from '../reviews/review-views';
 
 type Especialidad = { id: number; nombre: string };
 type Sector = Especialidad & { municipio: string };
@@ -176,6 +177,7 @@ export function PerfilPublico({ id }: { id: string }) {
       <ul>{perfil.especialidades.map(item => <li key={item.id}>{item.nombre}</li>)}</ul>
       <h2>Sectores que atiende</h2>
       <ul>{perfil.sectores.map(item => <li key={item.id}>{item.nombre} ({item.municipio})</li>)}</ul>
+      <OpinionesPublicas key={perfil.id} tecnicoId={perfil.id} />
     </article>}
   </Marco>;
 }

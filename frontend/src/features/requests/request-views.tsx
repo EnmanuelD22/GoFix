@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ErrorApi, guardar, solicitar, type Cuenta } from '../auth/api';
 import { Seguimiento } from './request-tracking';
+import { ValorarServicio } from '../reviews/review-views';
 
 const estados = {
   Pendiente: 'Pendiente', Aceptada: 'Aceptada', Rechazada: 'Rechazada',
@@ -191,6 +192,7 @@ export function DetalleSolicitud({ id }: { id: string }) {
         <button type="button" onClick={() => dialogo.current?.showModal()}>Eliminar solicitud</button>
       </div>}
       {cuenta.datos && <Seguimiento key={item.version} item={item} rol={cuenta.datos.rol} recargar={detalle.reintentar} />}
+      {cuenta.datos?.rol === 'cliente' && item.estado === 'Completada' && <ValorarServicio key={item.id} id={item.id} />}
       <dialog ref={dialogo} aria-labelledby="confirmar-eliminacion" onCancel={event => { if (eliminando) event.preventDefault(); }}>
         <h2 id="confirmar-eliminacion">¿Eliminar esta solicitud?</h2>
         <p>La solicitud dejará de aparecer en tu lista y en la del técnico.</p>
