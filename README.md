@@ -55,9 +55,9 @@ Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y prueba
 
 ### Decisiones previas a la implementación
 
-El responsable aprobó usar `PerfilTecnicoId` como identificador público y referencia del técnico. Las migraciones crearán las tablas de catálogos y un script SQL versionado e idempotente cargará los valores iniciales aprobados. El piloto seleccionado por delegación del responsable usa Santo Domingo de Guzmán, seis especialidades y cuatro sectores. La carga está en `scripts/sql/LoadInitialCatalogs.sql`. Siguen abiertas las observaciones sobre tipos temporales, expiración de sesión, ubicación de valoraciones y catálogo de errores (ARQ-H2, H4, H5 y H6), además de las políticas y metas propuestas en Especificaciones y SRS.
+El responsable aprobó usar `PerfilTecnicoId` como identificador público y referencia del técnico. Las migraciones crearán las tablas de catálogos y un script SQL versionado e idempotente cargará los valores iniciales aprobados. El piloto seleccionado por delegación del responsable usa Santo Domingo de Guzmán, seis especialidades y cuatro sectores. La carga está en `scripts/sql/LoadInitialCatalogs.sql`. Las observaciones ARQ-H2, H4 y H5 tienen soluciones implementadas; ARQ-H6 cuenta con códigos de error, pero su catálogo estable requiere revisión. Las políticas y metas propuestas en Especificaciones y SRS siguen sujetas a validación de producto.
 
-La rama histórica `feature/usuarios-perfiles` entregó la base técnica y ya completó sus tres PR. El trabajo funcional pendiente requiere ramas nuevas desde `dev` actualizado, con nombres que describan su contenido.
+La rama histórica `feature/usuarios-perfiles` entregó la base técnica y ya completó sus tres PR. Los incrementos posteriores se desarrollaron en ramas nuevas desde `dev`, con nombres que describen su contenido.
 
 ## Desarrollo local
 
