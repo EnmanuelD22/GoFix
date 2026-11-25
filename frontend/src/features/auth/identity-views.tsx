@@ -1,71 +1,108 @@
 'use client';
 
 import Link from 'next/link';
-import { Logo } from '../../components/Logo';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { consultarCuenta, ErrorApi, guardar, type Cuenta } from './api';
-
-function Panel({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <main className="identity" aria-labelledby="identity-title">
-      <aside className="identity-story theme-dark"><Logo /><h2>Tu hogar, en buenas manos.</h2><p>Encuentra técnicos de tu zona y sigue cada servicio desde tu cuenta.</p><Link href="/tecnicos">Explorar técnicos</Link></aside>
-      <div className="identity-panel">
-        <Logo />
-        <h1 id="identity-title">{titulo}</h1>
-        {children}
-      </div>
-    </main>
-  );
-}
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { AppShell, useCuenta } from '../../components/AppShell';
+import { Campo } from '../../components/Campo';
+import { Aviso } from '../../components/Estados';
+import { Fallo } from '../../components/Fallo';
+import { Icon } from '../../components/Icon';
+import { Logo } from '../../components/Logo';
+import { destinoSeguro, inicioPorRol } from '../../lib/navegacion';
+import { guardar, type Cuenta } from './api';
+import { olvidarSesion } from './session';
 
 const etiquetas: Record<string, string> = {
   nombre: 'Nombre', correo: 'Correo electrónico', telefono: 'Teléfono',
   contrasena: 'Contraseña', rol: 'Tipo de cuenta',
 };
 
-function campoInvalido(error: unknown, nombre: string, ayuda?: string) {
-  const invalido = error instanceof ErrorApi && Boolean(error.problema.errors?.[nombre]);
-  return { 'aria-invalid': invalido || undefined, 'aria-describedby': invalido ? [ayuda, `error-${nombre}`].filter(Boolean).join(' ') : ayuda };
+const mensajesAcceso = {
+  401: 'No se pudo iniciar sesión con esas credenciales. Revisa el correo y la contraseña; tras cinco intentos fallidos la cuenta se bloquea durante 15 minutos.',
+};
+
+function MarcoIdentidad({ titulo, subtitulo, children }: { titulo: string; subtitulo: string; children: ReactNode }) {
+  return (
+    <main id="contenido" tabIndex={-1} className="identity" aria-labelledby="identity-title">
+      <aside className="identity-story theme-dark" aria-label="Sobre GoFix">
+        <Logo />
+        <div>
+          <h2>Tu hogar, en buenas manos.</h2>
+          <p>Encuentra técnicos de tu zona, solicita la visita y sigue cada servicio desde tu cuenta.</p>
+        </div>
+        <ul className="checklist">
+          <li><Icon name="check" size={20} />Perfiles con cobertura y reputación</li>
+          <li><Icon name="check" size={20} />Historial de cada cambio del servicio</li>
+          <li><Icon name="check" size={20} />Tus datos de contacto, solo tras aceptar</li>
+        </ul>
+        <Link href="/tecnicos">Explorar técnicos sin cuenta <Icon name="arrow" size={18} /></Link>
+      </aside>
+      <div className="identity-panel">
+        <div className="identity-panel__logo"><Logo /></div>
+        <h1 id="identity-title">{titulo}</h1>
+        <p className="muted identity-panel__lead">{subtitulo}</p>
+        {children}
+      </div>
+    </main>
+  );
 }
 
-function Aviso({ error, acceso = false }: { error: unknown; acceso?: boolean }) {
-  const aviso = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (error) aviso.current?.focus(); }, [error]);
-  if (!error) return null;
-  const api = error instanceof ErrorApi ? error : null;
-  const mensaje = api?.status === 429 ? 'Hay demasiados intentos. Espera unos minutos y vuelve a intentarlo.'
-    : api?.status === 401 ? (acceso ? 'No se pudo iniciar sesión con esas credenciales.' : 'Tu sesión venció. Inicia sesión de nuevo.')
-    : api?.status === 400 ? 'Revisa los datos e inténtalo de nuevo.'
-    : api && [0, 408].includes(api.status) ? api.message
-    : 'No se pudo completar la operación. Vuelve a intentarlo.';
-  const campos = Object.entries(api?.problema.errors ?? {});
-  return (
-    <div ref={aviso} tabIndex={-1} className="identity-notice" role="alert">
-      {mensaje}
-      {campos.length > 0 && <ul>{campos.map(([campo, errores]) => (
-        <li key={campo} id={`error-${campo}`}>{etiquetas[campo.toLowerCase()] ?? campo} — {errores.join(' ')}</li>
-      ))}</ul>}
-      {api?.status === 401 && !acceso && <p><Link href="/acceso">Iniciar sesión</Link></p>}
-      {api?.problema.traceId && <small>Referencia {api.problema.traceId}</small>}
-    </div>
-  );
+function Contrasena({ registro, error }: { registro: boolean; error: unknown }) {
+  const [visible, setVisible] = useState(false);
+  return <Campo etiqueta="Contraseña" nombre="contrasena" error={error}
+    ayuda={registro ? 'Usa al menos 12 caracteres, con letras y números.' : undefined}>
+    {control => <div className="password-field">
+      <input {...control} type={visible ? 'text' : 'password'} autoComplete={registro ? 'new-password' : 'current-password'}
+        minLength={registro ? 12 : undefined} maxLength={128} required />
+      <button type="button" className="password-field__toggle" aria-pressed={visible} onClick={() => setVisible(valor => !valor)}>
+        <Icon name={visible ? 'eyeOff' : 'eye'} size={20} />
+        <span className="sr-only">Mostrar contraseña</span>
+      </button>
+    </div>}
+  </Campo>;
 }
 
 function Contacto({ cuenta, error }: { cuenta?: Cuenta; error: unknown }) {
   return <>
-    <label>Nombre<input name="nombre" autoComplete="name" minLength={2} maxLength={100} defaultValue={cuenta?.nombre} required {...campoInvalido(error, 'nombre')} /></label>
-    <label>Teléfono<input name="telefono" type="tel" autoComplete="tel" pattern="[+]?[0-9]{10,15}" defaultValue={cuenta?.telefono} required {...campoInvalido(error, 'telefono', 'telefono-ayuda')} />
-      <small id="telefono-ayuda">De 10 a 15 dígitos, con prefijo + opcional.</small>
-    </label>
+    <Campo etiqueta="Nombre completo" nombre="nombre" error={error}>
+      {control => <input {...control} autoComplete="name" minLength={2} maxLength={100} defaultValue={cuenta?.nombre} required />}
+    </Campo>
+    <Campo etiqueta="Teléfono" nombre="telefono" error={error} ayuda="De 10 a 15 dígitos, con prefijo + opcional. Ejemplo: +18095550100.">
+      {control => <input {...control} type="tel" inputMode="tel" autoComplete="tel" pattern="[+]?[0-9]{10,15}" defaultValue={cuenta?.telefono} required />}
+    </Campo>
   </>;
 }
 
-export function Acceso({ registro, cuentaCreada = false, sesionExpirada = false }: { registro: boolean; cuentaCreada?: boolean; sesionExpirada?: boolean }) {
+function TipoDeCuenta({ inicial }: { inicial: Cuenta['rol'] }) {
+  return <fieldset className="choice-group">
+    <legend>Tipo de cuenta</legend>
+    <div className="choice-group__options">
+      <label className="choice-card">
+        <input type="radio" name="rol" value="cliente" defaultChecked={inicial === 'cliente'} />
+        <span className="choice-card__body"><Icon name="home" /><strong>Cliente</strong><span>Necesito un servicio técnico</span></span>
+      </label>
+      <label className="choice-card">
+        <input type="radio" name="rol" value="tecnico" defaultChecked={inicial === 'tecnico'} />
+        <span className="choice-card__body"><Icon name="wrench" /><strong>Técnico</strong><span>Ofrezco mis servicios</span></span>
+      </label>
+    </div>
+  </fieldset>;
+}
+
+export function Acceso({ registro, cuentaCreada = false, sesionExpirada = false, volver, rolInicial = 'cliente' }: {
+  registro: boolean;
+  cuentaCreada?: boolean;
+  sesionExpirada?: boolean;
+  volver?: string;
+  rolInicial?: Cuenta['rol'];
+}) {
   const router = useRouter();
   const [error, setError] = useState<unknown>(null);
   const [ocupado, setOcupado] = useState(false);
   const enCurso = useRef(false);
+  const destino = destinoSeguro(volver);
+  const conDestino = destino ? 'volver=' + encodeURIComponent(destino) : '';
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,7 +113,9 @@ export function Acceso({ registro, cuentaCreada = false, sesionExpirada = false 
     const datos = Object.fromEntries(new FormData(event.currentTarget));
     try {
       const cuenta = await guardar<Cuenta>(registro ? '/auth/register' : '/auth/login', 'POST', datos);
-      router.replace(registro ? '/acceso?registro=ok' : cuenta.rol === 'tecnico' ? '/tecnico/panel' : '/cliente/solicitudes');
+      olvidarSesion();
+      router.replace(registro ? '/acceso?registro=ok' + (conDestino ? '&' + conDestino : '')
+        : destino ?? inicioPorRol(cuenta.rol));
     } catch (fallo) {
       setError(fallo);
       enCurso.current = false;
@@ -85,50 +124,46 @@ export function Acceso({ registro, cuentaCreada = false, sesionExpirada = false 
   }
 
   return (
-    <Panel titulo={registro ? 'Crea tu cuenta' : 'Inicia sesión'}>
-      {sesionExpirada && <p role="status">Tu sesión venció. Inicia sesión de nuevo para continuar.</p>}
-      {cuentaCreada && <p className="identity-success" role="status">Tu cuenta está lista. Inicia sesión para continuar.</p>}
-      <Aviso error={error} acceso={!registro} />
-      <form method="post" onSubmit={enviar} aria-busy={ocupado}>
+    <MarcoIdentidad titulo={registro ? 'Crea tu cuenta' : 'Inicia sesión'}
+      subtitulo={registro ? 'Regístrate gratis como cliente o como técnico.' : 'Accede para gestionar tus solicitudes y servicios.'}>
+      {sesionExpirada && <Aviso tono="warning" titulo="Inicia sesión para continuar">
+        <p>Si ya habías entrado, tu sesión venció por seguridad. Te llevaremos de vuelta a donde estabas.</p>
+      </Aviso>}
+      {!sesionExpirada && destino && !cuentaCreada && <Aviso>
+        <p>Inicia sesión para continuar. Te llevaremos de vuelta a donde estabas.</p>
+      </Aviso>}
+      {cuentaCreada && <div role="status"><Aviso tono="success" titulo="Tu cuenta está lista">
+        <p>Inicia sesión con tu correo y contraseña para continuar.</p>
+      </Aviso></div>}
+      {error ? <Fallo error={error} etiquetas={etiquetas} mensajes={registro ? undefined : mensajesAcceso} /> : null}
+      <form method="post" onSubmit={enviar} aria-busy={ocupado} className="form-card">
         <fieldset disabled={ocupado}>
           {registro && <>
-            <label>Tipo de cuenta<select name="rol" defaultValue="cliente" {...campoInvalido(error, 'rol')}>
-              <option value="cliente">Cliente</option><option value="tecnico">Técnico</option>
-            </select></label>
+            <TipoDeCuenta inicial={rolInicial} />
             <Contacto error={error} />
           </>}
-          <label>Correo electrónico<input name="correo" type="email" autoComplete={registro ? 'email' : 'username'} maxLength={254} required {...campoInvalido(error, 'correo')} /></label>
-          <label>Contraseña<input name="contrasena" type="password" autoComplete={registro ? 'new-password' : 'current-password'} minLength={registro ? 12 : undefined} maxLength={128} required {...campoInvalido(error, 'contrasena', registro ? 'contrasena-ayuda' : undefined)} />
-            {registro && <small id="contrasena-ayuda">Usa al menos 12 caracteres, con letras y números.</small>}
-          </label>
-          <button className="identity-button">{ocupado ? 'Espera un momento…' : registro ? 'Crear cuenta' : 'Iniciar sesión'}</button>
+          <Campo etiqueta="Correo electrónico" nombre="correo" error={error}>
+            {control => <input {...control} type="email" inputMode="email" autoComplete={registro ? 'email' : 'username'} maxLength={254} required />}
+          </Campo>
+          <Contrasena registro={registro} error={error} />
+          <button className="btn btn--block" type="submit">{ocupado
+            ? <><span className="spinner" aria-hidden="true" />Espera un momento…</>
+            : registro ? 'Crear cuenta' : 'Iniciar sesión'}</button>
         </fieldset>
       </form>
-      {registro ? <p>¿Ya tienes cuenta? <Link href="/acceso">Iniciar sesión</Link></p>
-        : <p>¿Primera vez en GoFix? <Link href="/registro">Crear cuenta</Link></p>}
-    </Panel>
+      {registro
+        ? <p className="identity-switch">¿Ya tienes cuenta? <Link href={'/acceso' + (conDestino ? '?' + conDestino : '')}>Iniciar sesión</Link></p>
+        : <p className="identity-switch">¿Primera vez en GoFix? <Link href={'/registro' + (conDestino ? '?' + conDestino : '')}>Crear cuenta</Link></p>}
+    </MarcoIdentidad>
   );
 }
 
-export function MiCuenta() {
-  const router = useRouter();
-  const [cuenta, setCuenta] = useState<Cuenta | null>(null);
+function DatosCuenta() {
+  const { cuenta, actualizar } = useCuenta();
   const [error, setError] = useState<unknown>(null);
-  const [cargando, setCargando] = useState(true);
-  const [intento, setIntento] = useState(0);
   const [ocupado, setOcupado] = useState(false);
-  const enCurso = useRef(false);
   const [guardado, setGuardado] = useState(false);
-
-  useEffect(() => {
-    const control = new AbortController();
-    consultarCuenta(control.signal).then(setCuenta).catch((fallo: unknown) => {
-      if (control.signal.aborted) return;
-      if (fallo instanceof ErrorApi && fallo.status === 401) router.replace('/acceso?sesion=expirada');
-      else setError(fallo);
-    }).finally(() => { if (!control.signal.aborted) setCargando(false); });
-    return () => control.abort();
-  }, [intento, router]);
+  const enCurso = useRef(false);
 
   async function editar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -139,49 +174,45 @@ export function MiCuenta() {
     setError(null);
     try {
       const datos = Object.fromEntries(new FormData(event.currentTarget));
-      setCuenta(await guardar<Cuenta>('/cuenta', 'PUT', datos));
+      actualizar(await guardar<Cuenta>('/cuenta', 'PUT', datos));
+      olvidarSesion();
       setGuardado(true);
     } catch (fallo) { setError(fallo); }
     finally { enCurso.current = false; setOcupado(false); }
   }
 
-  async function salir() {
-    if (enCurso.current) return;
-    enCurso.current = true;
-    setOcupado(true);
-    setError(null);
-    try {
-      await guardar('/auth/logout', 'POST');
-      setCuenta(null);
-      router.replace('/acceso');
-    } catch (fallo) { setError(fallo); enCurso.current = false; setOcupado(false); }
-  }
+  return <div className="account-grid">
+    <section className="card" aria-labelledby="datos-title">
+      <h2 id="datos-title">Datos de contacto</h2>
+      <p className="muted section-lead">El técnico o el cliente verá tu nombre y teléfono solo cuando se acepte un servicio.</p>
+      {guardado && <div role="status"><Aviso tono="success"><p>Cambios guardados.</p></Aviso></div>}
+      {error ? <Fallo error={error} etiquetas={etiquetas} /> : null}
+      <form key={`${cuenta.nombre}\n${cuenta.telefono}`} method="post" onSubmit={editar} aria-busy={ocupado} className="stack-form">
+        <fieldset disabled={ocupado}>
+          <Contacto cuenta={cuenta} error={error} />
+          <button className="btn" type="submit">{ocupado ? 'Guardando…' : 'Guardar cambios'}</button>
+        </fieldset>
+      </form>
+    </section>
+    <section className="card" aria-labelledby="acceso-title">
+      <h2 id="acceso-title">Acceso</h2>
+      <dl className="details">
+        <div><dt>Correo electrónico</dt><dd>{cuenta.correo}</dd></div>
+        <div><dt>Tipo de cuenta</dt><dd>{cuenta.rol === 'tecnico' ? 'Técnico' : 'Cliente'}</dd></div>
+      </dl>
+      <p className="muted section-lead">Por seguridad, la sesión vence a los 60 minutos. Cierra sesión al terminar si usas un equipo compartido.</p>
+      <div className="quick-links">
+        <Link href={inicioPorRol(cuenta.rol)}><Icon name="home" size={18} />{cuenta.rol === 'tecnico' ? 'Mi agenda de servicios' : 'Mi panel'}</Link>
+        {cuenta.rol === 'tecnico' && <Link href="/tecnico/perfil"><Icon name="wrench" size={18} />Editar mi perfil profesional</Link>}
+        {cuenta.rol === 'tecnico' && cuenta.perfilTecnicoId && <Link href={'/tecnicos/' + cuenta.perfilTecnicoId}><Icon name="eye" size={18} />Ver mi perfil público</Link>}
+        {cuenta.rol === 'cliente' && <Link href="/tecnicos"><Icon name="search" size={18} />Buscar técnicos</Link>}
+      </div>
+    </section>
+  </div>;
+}
 
-  return (
-    <Panel titulo="Mi cuenta">
-      {cargando && <p role="status">Cargando tu cuenta…</p>}
-      <Aviso error={error} />
-      {!cuenta && !cargando && Boolean(error) && <button type="button" onClick={() => {
-        setError(null); setCargando(true); setIntento(intento + 1);
-      }}>Volver a intentar</button>}
-      {cuenta && <>
-        <dl className="identity-details">
-          <div><dt>Correo electrónico</dt><dd>{cuenta.correo}</dd></div>
-          <div><dt>Tipo de cuenta</dt><dd>{cuenta.rol === 'tecnico' ? 'Técnico' : 'Cliente'}</dd></div>
-        </dl>
-        {cuenta.rol === 'tecnico' ? <p><Link href="/tecnico/solicitudes">Solicitudes asignadas</Link></p>
-          : <p><Link href="/cliente/solicitudes">Mis solicitudes</Link></p>}
-        {cuenta.rol === 'tecnico' && <p><Link href="/tecnico/panel">Mi agenda de servicios</Link></p>}
-        {cuenta.rol === 'tecnico' && <p><Link href="/tecnico/perfil">Editar mi perfil profesional</Link></p>}
-        {guardado && <p role="status" className="identity-success">Cambios guardados.</p>}
-        <form key={`${cuenta.nombre}\n${cuenta.telefono}`} method="post" onSubmit={editar} aria-busy={ocupado}>
-          <fieldset disabled={ocupado}>
-            <Contacto cuenta={cuenta} error={error} />
-            <button className="identity-button">Guardar cambios</button>
-          </fieldset>
-        </form>
-        <button className="identity-exit" type="button" disabled={ocupado} onClick={salir}>Cerrar sesión</button>
-      </>}
-    </Panel>
-  );
+export function MiCuenta() {
+  return <AppShell titulo="Mi cuenta" descripcion="Consulta tus datos de acceso y actualiza tu información de contacto.">
+    <DatosCuenta />
+  </AppShell>;
 }

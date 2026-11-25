@@ -94,7 +94,7 @@ dotnet run --project src/GoFix.Api --launch-profile GoFix.Api
 npm.cmd --prefix frontend run dev
 ```
 
-Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gestionar la cuenta. Los técnicos pueden editar su descripción y cobertura en `/tecnico/perfil`. Next.js envía `/api` a `https://localhost:7043`. La configuración alternativa está en [frontend/.env.example](frontend/.env.example).
+Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gestionar la cuenta. Tras iniciar sesión, el cliente llega a su panel `/cliente/panel` y el técnico a su agenda `/tecnico/panel`. Los técnicos pueden editar su descripción y cobertura en `/tecnico/perfil`. Next.js envía `/api` a `https://localhost:7043`. La configuración alternativa está en [frontend/.env.example](frontend/.env.example).
 
 | Ruta | Comportamiento actual |
 |---|---|
@@ -121,7 +121,7 @@ El promedio y la cantidad se calculan desde las valoraciones persistidas mediant
 
 ## Solicitudes de servicio
 
-Desde la ficha pública de un técnico, selecciona «Solicitar servicio». El cliente puede filtrar sus solicitudes por estado en `/cliente/solicitudes` y abrir el detalle para editar o eliminar una solicitud pendiente. La eliminación pide confirmación y retira la solicitud de ambas listas. El técnico consulta las solicitudes asignadas en `/tecnico/solicitudes`.
+Desde la ficha pública de un técnico, selecciona «Solicitar servicio»; sin sesión, el acceso devuelve después al formulario. El cliente puede filtrar sus solicitudes por estado en `/cliente/solicitudes` y abrir el detalle para editar o eliminar una solicitud pendiente. La eliminación pide confirmación y retira la solicitud de ambas listas. El técnico consulta las solicitudes asignadas en `/tecnico/solicitudes`.
 
 La API expone `POST /api/v1/solicitudes` con el encabezado `Idempotency-Key`, y `GET /api/v1/solicitudes` con los filtros `estado`, `page` y `pageSize`. Para el detalle se usa `GET /api/v1/solicitudes/{id}`. La edición usa `PUT` con `version` en el cuerpo y la eliminación usa `DELETE` con `X-Resource-Version`. Si la versión cambió, vuelve a consultar el detalle antes de reintentar.
 
@@ -157,7 +157,7 @@ Los formularios conservan los datos ante fallos recuperables y bloquean envíos 
 
 La creación de solicitudes conserva su clave de idempotencia para recuperar una respuesta perdida. Las transiciones con resultado incierto requieren consultar de nuevo el detalle antes de confirmar otra acción. Los conflictos de versión ofrecen recargar los datos actuales.
 
-Los errores reciben foco y se asocian a los campos correspondientes. Los diálogos permiten navegación por teclado y la interfaz respeta la preferencia de movimiento reducido. Los flujos principales se comprueban a 360, 768 y 1440 px.
+Los errores reciben foco y se muestran junto a cada campo con su ayuda y contador. Si la sesión vence, el acceso devuelve a la página anterior (solo rutas internas). Existen páginas propias para 404 y errores inesperados, un enlace para saltar al contenido y un menú móvil accesible. Los diálogos permiten navegación por teclado y la interfaz respeta la preferencia de movimiento reducido. Los flujos principales se comprueban a 360, 768 y 1440 px.
 
 Las pruebas de navegador están en `tests/web`. Requieren Python con Playwright, Edge, SQL Server local, el SDK .NET y los certificados HTTPS de desarrollo ya configurados. Instala Playwright en un entorno Python y ejecuta `tests/web/Test-Web.ps1 -Python <ruta-al-python>`. El script crea y elimina una base temporal, inicia los servidores y termina sus procesos al finalizar. Puedes añadir `-ChromePath <chrome.exe>` y `-AxePath <axe.min.js>` para comprobar Chrome y ejecutar la revisión automática de accesibilidad.
 
@@ -184,7 +184,7 @@ dotnet test GoFix.slnx
 
 `GoFix.Api.Tests` comprueba el contrato HTTP, la antifalsificación y la autorización. `GoFix.Integration.Tests` verifica migraciones, registro, edición, sesión e integridad con SQL Server. Configura `GOFIX_TEST_SQLSERVER` con una conexión exclusiva de pruebas que permita crear bases temporales. Las pruebas de Identidad crean y eliminan bases propias con nombre `GoFixIdentityTests_<guid>` y se omiten si falta esa configuración.
 
-El frontend integra el diseño Índigo Medianoche del modelo local: portada con catálogos reales, directorio con filtros, perfiles, panel técnico y formularios adaptables. Inter y Space Grotesk se distribuyen localmente con sus licencias. La navegación usa la sesión y el rol; los datos de demostración del modelo no sustituyen las respuestas de la API. La carpeta `gofix-frontend/` sigue siendo una referencia local ignorada por Git. Las pruebas web incluyen portada, búsqueda y capturas a 360 y 1440 px.
+El frontend integra el diseño Índigo Medianoche del modelo local: portada con catálogos reales, directorio con filtros, perfiles, paneles de cliente y técnico con un marco común por rol, progreso visual de cada solicitud y formularios adaptables. Inter y Space Grotesk se distribuyen localmente con sus licencias. La navegación usa la sesión y el rol; los datos de demostración del modelo no sustituyen las respuestas de la API. La carpeta `gofix-frontend/` sigue siendo una referencia local ignorada por Git. Las pruebas web incluyen portada, búsqueda y capturas a 360 y 1440 px.
 
 ## Entrega y calidad
 

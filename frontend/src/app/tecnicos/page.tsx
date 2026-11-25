@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { Directorio } from '../../features/professionals/public-directory';
+
+export const metadata: Metadata = { title: 'Buscar técnicos' };
 
 export default async function TecnicosPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const parametros = await searchParams;
