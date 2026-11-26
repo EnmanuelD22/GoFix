@@ -2,9 +2,66 @@
 
 Plataforma web para conectar clientes con técnicos de su zona. El producto contempla búsqueda por especialidad y sector, solicitudes de asistencia, seguimiento del servicio y valoraciones. La primera versión está orientada a un municipio piloto, con interfaz en español; pagos, chat y mapas quedan fuera de su alcance inicial.
 
+## Instalación y ejecución en Windows
+
+Esta guía crea una base nueva de GoFix en SQL Server y carga los catálogos del piloto. No hace falta copiar archivos `.mdf` ni usar credenciales del autor.
+
+### Requisitos
+
+- Git y PowerShell.
+- SDK .NET **10.0.400** o una revisión compatible de la misma banda `10.0.4xx` (véase [global.json](global.json)).
+- Node.js 24 o superior y npm.
+- SQL Server o SQL Server Express instalado y en ejecución, con autenticación de Windows y una cuenta con permisos para crear bases y aplicar migraciones.
+- `sqlcmd` instalado y disponible en el PATH para cargar los catálogos.
+
+### 1. Obtener el proyecto y sus dependencias
+
+```powershell
+git clone https://github.com/EnmanuelD22/GoFix.git
+cd GoFix
+dotnet restore GoFix.slnx --locked-mode
+dotnet build GoFix.slnx --no-restore
+dotnet tool restore
+npm.cmd --prefix frontend ci
+dotnet dev-certs https --trust
+```
+
+Acepta la instalación del certificado de desarrollo cuando Windows lo solicite. Comprueba que los puertos `7043` y `3000` estén libres.
+
+### 2. Configurar SQL Server y aplicar migraciones
+
+El siguiente ejemplo usa una instancia local `localhost` y una base nueva `GoFixDB`. Cambia `localhost` por el nombre de tu instancia, por ejemplo `.\SQLEXPRESS`, en **ambos comandos**. `TrustServerCertificate=True` es apropiado para esta prueba local con certificado de SQL Server no confiable.
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:GoFix" "Server=localhost;Database=GoFixDB;Integrated Security=True;Encrypt=True;TrustServerCertificate=True" --project src/GoFix.Api
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+dotnet tool run dotnet-ef database update --project src/GoFix.Infrastructure --startup-project src/GoFix.Api
+sqlcmd -S localhost -d GoFixDB -E -C -b -I -f 65001 -i scripts/sql/LoadInitialCatalogs.sql
+```
+
+EF Core crea la base si la cuenta tiene permiso, aplica las tres migraciones y registra su historial. El último comando carga especialidades y sectores: es necesario para completar y publicar un perfil técnico. Para usar una base existente, comprueba el destino y respáldala antes de aplicar migraciones. Consulta la [guía de base de datos](docs/BaseDeDatos.md) para otras opciones y solución de problemas.
+
+### 3. Iniciar la API y la web
+
+Abre dos terminales PowerShell en la raíz del proyecto. En la primera:
+
+```powershell
+dotnet run --project src/GoFix.Api --launch-profile GoFix.Api
+```
+
+En la segunda:
+
+```powershell
+npm.cmd --prefix frontend run dev
+```
+
+Abre **https://localhost:3000**. Next.js usa HTTPS de desarrollo y puede solicitar la instalación de un certificado local mediante `mkcert`; acepta la solicitud. El certificado de la API debe ser confiable para Windows y Node. Si aparece un error TLS, revisa los mensajes de ambas terminales y el certificado antes de continuar.
+
+Comprueba [https://localhost:7043/health/ready](https://localhost:7043/health/ready): debe mostrar `Healthy`. Registra un cliente y un técnico desde la aplicación; el técnico debe completar su descripción, especialidad y sector para aparecer en el directorio. Detén cada servidor con `Ctrl+C` en su terminal.
+
 ## Estado actual
 
-La base técnica está implementada: solución por capas, host ASP.NET Core, configuración de EF Core para SQL Server, diagnósticos de disponibilidad, errores HTTP con Problem Details, emisión de token antifalsificación, OpenAPI de desarrollo y una página inicial Next.js con React. Next.js se ejecuta en un proceso Node separado y reenvía `/api` al backend HTTPS.
+La base técnica está implementada: solución por capas, host ASP.NET Core, configuración de EF Core para SQL Server, diagnósticos de disponibilidad, errores HTTP con Problem Details, emisión de token antifalsificación, OpenAPI de desarrollo y una interfaz Next.js con React. Next.js se ejecuta en un proceso Node separado y reenvía `/api` al backend HTTPS.
 
 Identidad permite registrar cuentas de cliente y técnico, iniciar y cerrar sesión, consultar la sesión y editar el nombre y el teléfono propios. El registro técnico crea un perfil inicial sin publicar. Los técnicos pueden completar su perfil con descripción, especialidades y sectores activos. El directorio público permite buscar técnicos publicados y consultar su ficha y reputación agregada. Los clientes pueden crear solicitudes desde el perfil de un técnico, consultar sus solicitudes y editar o eliminar las pendientes. Los técnicos pueden consultar las solicitudes que tienen asignadas.
 
@@ -23,7 +80,7 @@ ASP.NET Core Identity gestiona cuentas, contraseñas y roles. Las versiones exac
 
 ## Arquitectura y estructura
 
-Monolito modular con Clean Architecture pragmática. Los módulos previstos son Identidad, Profesionales, Servicios y Valoraciones. Las dependencias apuntan hacia el núcleo: Application depende de Domain; Infrastructure implementa los contratos de Application; Api compone los adaptadores y expone HTTP.
+Monolito modular con Clean Architecture pragmática. Los módulos son Identidad, Profesionales, Servicios y Valoraciones. Las dependencias apuntan hacia el núcleo: Application depende de Domain; Infrastructure implementa los contratos de Application; Api compone los adaptadores y expone HTTP.
 
 | Ruta | Responsabilidad |
 |---|---|
@@ -37,64 +94,9 @@ Monolito modular con Clean Architecture pragmática. Los módulos previstos son 
 
 Domain permanece independiente de frameworks. Los endpoints de negocio invocan casos de uso; los contratos entre módulos no deben exponer `DbSet` ni `IQueryable`.
 
-## Plan de implementación por módulos
+## API y configuración local
 
-Marca cada casilla cuando el alcance indicado esté implementado y verificado. Los criterios detallados están en el SRS.
-
-- [x] **1. Identidad (RF-01 a RF-03).** Registro de cliente o técnico, alta atómica del perfil técnico inicial, acceso y salida con cookie, consulta de sesión y edición de la cuenta propia.
-- [x] **1. Profesionales y catálogos (RF-04 y RF-05).** Edición y publicación del perfil profesional, selección de especialidades y sectores activos, y carga inicial de los catálogos.
-- [x] **2. Consulta de profesionales (RF-06 y RF-07).** Búsqueda paginada por especialidad y sector, perfil público y reputación sin exponer contactos privados.
-- [x] **3. Servicios, solicitudes (RF-08 a RF-11 y RF-24).** Alta idempotente, consulta, edición y eliminación lógica de solicitudes propias pendientes.
-- [x] **4. Servicios, seguimiento (RF-12 a RF-18, RF-21 y RF-23).** Transiciones por rol, historial, visibilidad de contacto y control de concurrencia sobre SQL Server.
-- [x] **5. Valoraciones (RF-19 y RF-20).** Una opinión por servicio completado, con permisos, promedio y cantidad de opiniones.
-- [x] **Seguridad y contratos (RNF-01 a RNF-03 y RNF-10).** Sesión, autorización por recurso, antifalsificación, protección de acceso y errores correlacionados.
-- [x] **Experiencia web (RF-22, RNF-06, RNF-07 y RNF-12).** Estados de carga, errores, accesibilidad, adaptación y prevención del doble envío.
-- [x] **Entrega y calidad (RNF-04, RNF-05, RNF-08, RNF-09 y RNF-11).** Migraciones reproducibles, límites entre módulos, recorrido completo, pruebas sobre SQL Server y procedimientos de operación.
-
-Cada incremento debe incluir sus migraciones, contratos HTTP, pantallas y pruebas aplicables. Las pruebas con SQL Server real verifican restricciones, transacciones y concurrencia.
-
-### Decisiones previas a la implementación
-
-El responsable aprobó usar `PerfilTecnicoId` como identificador público y referencia del técnico. Las migraciones crearán las tablas de catálogos y un script SQL versionado e idempotente cargará los valores iniciales aprobados. El piloto seleccionado por delegación del responsable usa Santo Domingo de Guzmán, seis especialidades y cuatro sectores. La carga está en `scripts/sql/LoadInitialCatalogs.sql`. Las observaciones ARQ-H2, H4 y H5 tienen soluciones implementadas; ARQ-H6 cuenta con códigos de error, pero su catálogo estable requiere revisión. Las políticas y metas propuestas en Especificaciones y SRS siguen sujetas a validación de producto.
-
-La rama histórica `feature/usuarios-perfiles` entregó la base técnica y ya completó sus tres PR. Los incrementos posteriores se desarrollaron en ramas nuevas desde `dev`, con nombres que describen su contenido.
-
-## Desarrollo local
-
-Requisitos: SDK indicado en `global.json`, Node.js 24 o superior compatible con el frontend, npm y PowerShell para los scripts. SQL Server es necesario para obtener readiness saludable y ejecutar los flujos de Identidad.
-
-Desde la raíz:
-
-```powershell
-dotnet restore GoFix.slnx --locked-mode
-dotnet build GoFix.slnx --no-restore
-npm.cmd --prefix frontend ci
-dotnet dev-certs https --trust
-```
-
-Configura `ConnectionStrings:GoFix` mediante User Secrets en desarrollo, o `ConnectionStrings__GoFix` en el entorno de despliegue. [appsettings.Example.json](src/GoFix.Api/appsettings.Example.json) muestra las claves admitidas sin credenciales reales. Los secretos y las claves persistidas de Data Protection deben almacenarse fuera del repositorio y de la publicación.
-
-Con la conexión configurada, aplica las migraciones a la base seleccionada. Crean el esquema de Identidad, los catálogos, la cobertura técnica, las solicitudes, el historial, la idempotencia y las valoraciones. Usa credenciales de migración en el paso de despliegue correspondiente.
-
-```powershell
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
-dotnet tool restore
-dotnet tool run dotnet-ef database update --project src/GoFix.Infrastructure --startup-project src/GoFix.Api
-```
-
-Consulta la [guía de base de datos](docs/BaseDeDatos.md) para revisar el esquema, generar el SQL de despliegue y cargar los catálogos cuando se aprueben sus valores.
-
-Inicia la API y el frontend en terminales separadas.
-
-```powershell
-dotnet run --project src/GoFix.Api --launch-profile GoFix.Api
-```
-
-```powershell
-npm.cmd --prefix frontend run dev
-```
-
-Abre `https://localhost:3000`. Usa `/registro`, `/acceso` y `/cuenta` para gestionar la cuenta. Tras iniciar sesión, el cliente llega a su panel `/cliente/panel` y el técnico a su agenda `/tecnico/panel`. Los técnicos pueden editar su descripción y cobertura en `/tecnico/perfil`. Next.js envía `/api` a `https://localhost:7043`. La configuración alternativa está en [frontend/.env.example](frontend/.env.example).
+Las instrucciones de instalación y migración están al inicio de este documento. [appsettings.Example.json](src/GoFix.Api/appsettings.Example.json) y [frontend/.env.example](frontend/.env.example) describen configuraciones adicionales.
 
 | Ruta | Comportamiento actual |
 |---|---|
@@ -145,7 +147,7 @@ La API expone `POST /api/v1/solicitudes/{id}/valoracion`, `GET` sobre esa misma 
 
 Las sesiones usan HTTPS, cookies HttpOnly y Secure y una duración absoluta de 60 minutos. Cerrar sesión revoca la fila persistida y rechaza cualquier copia de esa cookie. Las mutaciones requieren el token antifalsificación de la sesión actual.
 
-La API verifica rol y pertenencia de los recursos. Registro e inicio de sesión comparten diez intentos por minuto e IP. Las respuestas 429 incluyen Retry-After. Cinco accesos fallidos consecutivos bloquean la cuenta durante 15 minutos. Detrás de un proxy, configura únicamente las direcciones de confianza descritas en Desarrollo local.
+La API verifica rol y pertenencia de los recursos. Registro e inicio de sesión comparten diez intentos por minuto e IP. Las respuestas 429 incluyen Retry-After. Cinco accesos fallidos consecutivos bloquean la cuenta durante 15 minutos. Detrás de un proxy, configura únicamente las direcciones de confianza descritas en Verificación y publicación.
 
 Los errores de API devuelven Problem Details con code y traceId. El registro estructurado GoFix.Api.Errors conserva estado, código, tipo de excepción y correlación. Se filtran las categorías del framework que pueden registrar URL, valores de entrada o mensajes SQL. El registro sensible de EF permanece desactivado.
 
